@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+
+<body>
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h2>Admin Login</h2>
+            <input type="password" id="admin-pin" placeholder="Enter PIN">
+            <button id="login-btn" class="btn">Login</button>
+            <p id="login-msg" class="error hidden">Invalid PIN</p>
+        </div>
+    </div>
+
+    <!-- ADD EMPLOYEE MODAL -->
+    <div id="employee-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px; text-align: left;">
+            <h2>Add New Employee</h2>
+            <div style="margin-bottom: 1rem;">
+                <label>Name (Required)</label>
+                <input type="text" id="emp-name" placeholder="John Doe" style="width:100%; padding:0.5rem;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Role / Title</label>
+                <input type="text" id="emp-role" placeholder="e.g. Sales Associate" style="width:100%; padding:0.5rem;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Phone Number</label>
+                <input type="text" id="emp-phone" placeholder="e.g. 555-0100" style="width:100%; padding:0.5rem;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap: 0.5rem; margin-top:1.5rem;">
+                <button id="close-emp-modal" class="btn btn-outline"
+                    style="background:#f1f5f9; color:#334155;">Cancel</button>
+                <button id="save-emp-btn" class="btn">Save Employee</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- METRIC DETAILS MODAL -->
+    <div id="details-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 600px; width: 90%; text-align: left;">
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+                <h2 id="details-title" style="margin:0;">Metric Details</h2>
+                <button id="close-details-modal" class="btn btn-outline" style="padding: 0.4rem 0.8rem;">×</button>
+            </header>
+            <div id="details-content" class="table-container" style="max-height: 400px; overflow-y: auto;">
+                <table class="data-table">
+                    <thead id="details-thead">
+                        <!-- Populated by JS -->
+                    </thead>
+                    <tbody id="details-tbody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT ATTENDANCE MODAL -->
+    <div id="edit-attendance-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2>Edit Attendance</h2>
+            <input type="hidden" id="edit-att-id">
+            <div style="margin-bottom: 1rem;">
+                <label>Check In Time</label>
+                <input type="time" id="edit-att-in">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Check Out Time</label>
+                <input type="time" id="edit-att-out">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button id="close-edit-att-modal" class="btn btn-outline">Cancel</button>
+                <button id="save-edit-att-btn" class="btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER DEVICE MODAL -->
+    <div id="device-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2>Register New Device</h2>
+            <div style="margin-bottom: 1rem;">
+                <label>Device Name (e.g. Front Entrance)</label>
+                <input type="text" id="dev-name" placeholder="Front Kiosk">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button id="close-dev-modal" class="btn btn-outline">Cancel</button>
+                <button id="save-dev-btn" class="btn">Register</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD SHIFT MODAL -->
+    <div id="shift-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2>Create New Shift</h2>
+            <div style="margin-bottom: 1rem;">
+                <label>Shift Name</label>
+                <input type="text" id="shift-name" placeholder="Morning Shift">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Start Time</label>
+                <input type="time" id="shift-start">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Grace Period (minutes)</label>
+                <input type="number" id="shift-grace" value="15">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Gap Lock (minutes)</label>
+                <input type="number" id="shift-gap" value="60">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button id="close-shift-modal" class="btn btn-outline">Cancel</button>
+                <button id="save-shift-btn" class="btn">Create Shift</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT SHIFT MODAL -->
+    <div id="edit-shift-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2>Edit Shift</h2>
+            <input type="hidden" id="edit-shift-id">
+            <div style="margin-bottom: 1rem;">
+                <label>Shift Name</label>
+                <input type="text" id="edit-shift-name">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Start Time</label>
+                <input type="time" id="edit-shift-start">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Grace Period (minutes)</label>
+                <input type="number" id="edit-shift-grace">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Gap Lock (minutes)</label>
+                <input type="number" id="edit-shift-gap">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button id="close-edit-shift-modal" class="btn btn-outline">Cancel</button>
+                <button id="save-edit-shift-btn" class="btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-content" class="hidden">
+        <nav class="sidebar">
+            <h2>Admin Area</h2>
+            <ul class="nav-links">
+                <li data-tab="overview" class="active">Overview</li>
+                <li data-tab="attendance">Attendance <span id="missing-alert" class="badge hidden">!</span></li>
+                <li data-tab="employees">Employees</li>
+                <li data-tab="devices">Devices</li>
+                <li data-tab="shifts">Shifts</li>
+                <li data-tab="reports">Reports</li>
+            </ul>
+        </nav>
+
+        <main class="content">
+            <!-- OVERVIEW TAB -->
+            <section id="tab-overview" class="tab-pane active">
+                <header>
+                    <h1>Today's Overview</h1>
+                    <span id="overview-date" class="date-badge">Loading...</span>
+                </header>
+
+                <div class="metrics-grid">
+                    <div class="metric-card" id="card-total-employees" style="cursor: pointer;">
+                        <h3>Total Employees</h3>
+                        <p id="metric-employees" class="number">--</p>
+                    </div>
+                    <div class="metric-card" id="card-present" style="cursor: pointer;">
+                        <h3>Present Today</h3>
+                        <p id="metric-present" class="number">--</p>
+                    </div>
+                    <div class="metric-card warning" id="card-absent" style="cursor: pointer;">
+                        <h3>Absentees</h3>
+                        <p id="metric-absent" class="number">--</p>
+                    </div>
+                    <div class="metric-card" id="card-in-out" style="cursor: pointer;">
+                        <h3>Total Check-ins / Outs</h3>
+                        <p id="metric-in-out" class="number">-- / --</p>
+                    </div>
+                    <div class="metric-card" id="card-locations" style="cursor: pointer;">
+                        <h3>Active Locations</h3>
+                        <p id="metric-locations" class="number">--</p>
+                    </div>
+                </div>
+
+                <h2>Active Devices</h2>
+                <div id="device-status-grid" class="devices-grid">
+                    <!-- Populated by JS -->
+                </div>
+
+                <h2
+                    style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text-muted); font-size: 1.1rem; text-transform: uppercase;">
+                    Recent Scan Failures</h2>
+                <div class="table-container">
+                    <table id="failures-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Device</th>
+                                <th>Employee ID</th>
+                                <th>Result / Reason</th>
+                                <th>Match Distance</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- Populated by JS --></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ATTENDANCE TAB -->
+            <section id="tab-attendance" class="tab-pane hidden">
+                <header>
+                    <h1>Attendance Records</h1>
+                    <div class="actions">
+                        <input type="date" id="att-date-filter">
+                    </div>
+                </header>
+                <div class="table-container">
+                    <table id="attendance-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Status</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Match Dist</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- Populated by JS --></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- EMPLOYEES TAB -->
+            <section id="tab-employees" class="tab-pane hidden">
+                <header>
+                    <h1>Employees</h1>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button id="add-employee-btn" class="btn">Add Employee</button>
+                        <a href="/enroll" target="_blank" class="btn btn-outline" style="text-decoration:none;">Face
+                            Enrollment</a>
+                    </div>
+                </header>
+                <div class="table-container">
+                    <table id="employees-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Shift</th>
+                                <th>Quality</th>
+                                <th>Last Auto-Updated</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- Populated by JS --></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- DEVICES TAB -->
+            <section id="tab-devices" class="tab-pane hidden">
+                <header>
+                    <h1>Kiosk Devices</h1>
+                    <button id="add-device-btn" class="btn">Register Device</button>
+                </header>
+                <div class="table-container">
+                    <table id="devices-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>API Key</th>
+                                <th>Status</th>
+                                <th>Last Heartbeat</th>
+                                <th>Uptime Today</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- Populated by JS --></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SHIFTS TAB -->
+            <section id="tab-shifts" class="tab-pane hidden">
+                <header>
+                    <h1>Shifts</h1>
+                    <button id="add-shift-btn" class="btn">Add Shift</button>
+                </header>
+                <div class="table-container">
+                    <table id="shifts-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Start Time</th>
+                                <th>Grace Period</th>
+                                <th>Gap Lock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- Populated by JS --></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- REPORTS TAB -->
+            <section id="tab-reports" class="tab-pane hidden">
+                <header>
+                    <h1>Monthly Reports</h1>
+                </header>
+                <div class="card">
+                    <div style="display:flex; gap: 1rem; align-items:flex-end;">
+                        <div style="display:flex; flex-direction:column;">
+                            <label>Select Month</label>
+                            <input type="month" id="report-month">
+                        </div>
+                        <button id="download-report-btn" class="btn">Download Excel (.xlsx)</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/assets/js/admin.js"></script>
+</body>
+
+</html>

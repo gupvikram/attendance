@@ -1,0 +1,13 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.log.*
+.DS_Store
+exports/
+static/thumbnails/
+implementation_plan.md.resolved
+uvicorn.log

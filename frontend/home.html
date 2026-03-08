@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Kiosk</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="/assets/js/face-api.min.js"></script>
+    <link rel="stylesheet" href="/assets/css/kiosk.css">
+    <style>
+        /* Setup Banner */
+        #setup-banner {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        #setup-banner.show {
+            display: flex;
+        }
+
+        #setup-banner h2 {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        #setup-banner p {
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        #setup-banner input {
+            width: 320px;
+            padding: 0.9rem 1.2rem;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: monospace;
+            margin-bottom: 1rem;
+            outline: none;
+        }
+
+        #setup-banner input:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        #setup-banner button {
+            padding: 0.85rem 2rem;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            width: 320px;
+        }
+
+        #setup-banner button:hover {
+            opacity: 0.9;
+        }
+
+        #setup-err {
+            color: #f87171;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            min-height: 1.2em;
+        }
+
+        /* Gear icon in header */
+        #setup-gear-btn {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #64748b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+            transition: all 0.2s;
+        }
+
+        #setup-gear-btn:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- DEVICE SETUP BANNER (shown when unregistered) -->
+    <div id="setup-banner">
+        <div style="font-size:3rem; margin-bottom:1rem;">🔌</div>
+        <h2>Connect This Kiosk</h2>
+        <p>This device isn't registered yet. Paste the <strong>API Key</strong> from Admin → Devices to link this kiosk
+            to your account.</p>
+        <input type="text" id="setup-api-key" placeholder="Paste API key here  (e.g. sk_...)">
+        <div id="setup-err"></div>
+        <button id="setup-save-btn">Connect &amp; Continue →</button>
+    </div>
+
+    <!-- Gear icon to re-open setup at any time -->
+    <button id="setup-gear-btn" title="Device Settings">⚙</button>
+
+    <header class="kiosk-header">
+        <div class="header-content">
+            <h1 id="kiosk-location">📍 Loading Kiosk...</h1>
+            <div id="device-status" class="status-indicator online">
+                <span class="dot"></span> <span class="status-text">Online</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="kiosk-main">
+        <div class="camera-container">
+            <!-- Video feed -->
+            <video id="webcam" autoplay muted playsinline></video>
+            <!-- Canvas for debug/drawings (optional, mostly face-api uses its own or we overlay) -->
+            <canvas id="overlay-canvas"></canvas>
+
+            <!-- Face alignment guide -->
+            <div class="alignment-guide">
+                <div class="oval"></div>
+                <p class="guide-text">Position your face inside the oval</p>
+            </div>
+
+            <!-- Error state overlay (hidden by default) -->
+            <div id="camera-error" class="error-overlay hidden">
+                <p>Camera access denied or unavailable.</p>
+                <button id="retry-camera-btn">Retry Camera</button>
+                <button id="reload-app-btn">Reload Kiosk</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="scan-btn" class="primary-btn" disabled>TAP TO SCAN</button>
+            <p id="feedback-msg" class="feedback-msg">Initializing models...</p>
+        </div>
+    </main>
+
+    <!-- Maintenance menu (legacy, kept for queue display) -->
+    <div id="maintenance-trigger" style="position:fixed; bottom:0; right:0; width:50px; height:50px; z-index:9999;">
+    </div>
+    <div id="maintenance-menu" class="hidden">
+        <h3>Maintenance Menu</h3>
+        <p id="time-skew-warning" class="hidden warning-text">⚠️ Device time skew detected</p>
+        <p>Queue Size: <span id="queue-size-disp">0</span></p>
+        <button id="close-maintenance">Close</button>
+    </div>
+
+    <!-- Hidden canvas for lighting normalization -->
+    <canvas id="normalization-canvas" style="display:none;"></canvas>
+
+    <script src="/assets/js/kiosk.js"></script>
+</body>
+
+</html>

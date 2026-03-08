@@ -1,0 +1,148 @@
+@import 'base.css';
+
+.enroll-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    width: 100%;
+    padding: 2rem;
+}
+
+.enroll-container h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #fff 0%, var(--text-muted) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+}
+
+.enroll-card {
+    margin-top: 2rem;
+    padding: 2.5rem;
+}
+
+.controls {
+    margin-bottom: 2rem;
+}
+
+.form-group label {
+    display: block;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.camera-box {
+    position: relative;
+    width: 640px;
+    height: 480px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 0 auto 2rem auto;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+video,
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+    object-fit: cover;
+}
+
+.oval-guide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+.oval {
+    width: 260px;
+    height: 360px;
+    border: 2px dashed var(--primary);
+    border-radius: 50%;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+}
+
+.instructions {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid var(--primary-glow);
+    color: var(--primary);
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.progress-bar {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+}
+
+.step {
+    width: 50px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.step.active {
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.step.done {
+    background: var(--success);
+}
+
+.msg {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-weight: 500;
+    min-height: 1.5rem;
+    color: var(--text-muted);
+}
+
+.msg.error {
+    color: var(--danger);
+}
+
+.msg.success {
+    color: var(--success);
+}
+
+@media (max-width: 768px) {
+    .camera-box {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4/3;
+    }
+
+    .enroll-container {
+        padding: 1rem;
+    }
+
+    .oval {
+        width: 180px;
+        height: 250px;
+    }
+}

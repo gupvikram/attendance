@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Enrollment | Premium Attendance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="/assets/js/face-api.min.js"></script>
+    <link rel="stylesheet" href="/assets/css/enroll.css">
+</head>
+
+<body>
+    <div class="enroll-container">
+        <header class="enroll-header">
+            <h1 id="enroll-title">Premium Enrollment</h1>
+            <p style="color:var(--text-muted); text-align:center;">Register a new face profile for high-accuracy
+                recognition.</p>
+        </header>
+
+        <div class="enroll-card glass-card">
+            <div class="controls">
+                <div class="form-group">
+                    <label for="employee-select">Search Employee</label>
+                    <select id="employee-select" class="premium-input" style="width:100%">
+                        <option value="" disabled selected>Loading employees...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="instructions" id="inst-text">
+                Center your face in the frame and follow the on-screen prompts.
+            </div>
+
+            <div class="camera-box">
+                <video id="webcam" autoplay muted playsinline></video>
+                <canvas id="overlay"></canvas>
+                <div class="oval-guide">
+                    <div class="oval"></div>
+                </div>
+            </div>
+
+            <div class="progress-bar" id="progress-bar">
+                <div class="step active"></div>
+                <div class="step"></div>
+                <div class="step"></div>
+                <div class="step"></div>
+                <div class="step"></div>
+            </div>
+
+            <button id="capture-btn" class="primary-btn" disabled>Capture Frame 1 (Front)</button>
+            <p class="msg" id="feedback"></p>
+
+            <!-- Hidden canvas for thumbnail generation & normalization -->
+            <canvas id="hidden-canvas" style="display:none;"></canvas>
+        </div>
+    </div>
+
+    <script src="/assets/js/enroll.js"></script>
+</body>
+
+</html>
