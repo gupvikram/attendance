@@ -1,15 +1,16 @@
 import os
 import openpyxl
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 
 from core.config import supabase
+from core.deps import require_admin_company
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 @router.get("/monthly")
-async def get_monthly_summary(month: str = None):
+async def get_monthly_summary(month: str = None, company_id: str = Depends(require_admin_company)):
     """
     Get summary of attendance (present, late, absent) per employee for a specific month.
     Month format: YYYY-MM. Defaults to current month.
@@ -26,12 +27,12 @@ async def get_monthly_summary(month: str = None):
     else:
         end_date = f"{y}-{m+1:02d}-01"
 
-    # Fetch employees
-    emps_res = supabase.table("employees").select("id", "name", "role", "active").execute()
+    # Fetch employees for this company
+    emps_res = supabase.table("employees").select("id", "name", "role", "active").eq("company_id", company_id).execute()
     employees = emps_res.data
     
-    # Fetch attendance
-    att_res = supabase.table("attendance").select("*").gte("date", start_date).lt("date", end_date).execute()
+    # Fetch attendance for this company
+    att_res = supabase.table("attendance").select("*").eq("company_id", company_id).gte("date", start_date).lt("date", end_date).execute()
     attendance = att_res.data
 
     # Aggregate
@@ -65,9 +66,9 @@ async def get_monthly_summary(month: str = None):
     return list(summary.values())
 
 @router.get("/monthly/export")
-async def export_monthly_excel(month: str = None):
+async def export_monthly_excel(month: str = None, company_id: str = Depends(require_admin_company)):
     """Generate and return an Excel file from the monthly summary."""
-    data = await get_monthly_summary(month)
+    data = await get_monthly_summary(month, company_id)
     
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -98,12 +99,13 @@ async def export_monthly_excel(month: str = None):
     )
 
 @router.get("/failures")
-async def get_recent_failures(limit: int = 20):
+async def get_recent_failures(limit: int = 20, company_id: str = Depends(require_admin_company)):
     """Fetch recent failed recognition attempts from the logging table."""
     try:
         # Join with employees to get the name, and devices to get the location name
         res = supabase.table("recognition_logs") \
             .select("*, employee:employees(name), device:devices(name)") \
+            .eq("company_id", company_id) \
             .neq("result", "success") \
             .order("timestamp", desc=True) \
             .limit(limit) \

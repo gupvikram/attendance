@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura Iris Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface: #1e293b;
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.4);
+            --secondary: #818cf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Glows */
+        .ambient-glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.15;
+            animation: pulse-glow 8s infinite alternate;
+        }
+
+        .glow-1 {
+            width: 50vw;
+            height: 50vw;
+            background: var(--primary);
+            top: -20vw;
+            left: -10vw;
+        }
+
+        .glow-2 {
+            width: 40vw;
+            height: 40vw;
+            background: var(--secondary);
+            bottom: -10vw;
+            right: -10vw;
+            animation-delay: -4s;
+        }
+
+        @keyframes pulse-glow {
+            0% {
+                transform: scale(1);
+                opacity: 0.15;
+            }
+
+            100% {
+                transform: scale(1.1);
+                opacity: 0.25;
+            }
+        }
+
+        main {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 4.5rem);
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            color: var(--text-muted);
+            font-weight: 300;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Cards Container */
+        .portals-grid {
+            display: flex;
+            gap: 2rem;
+            width: 100%;
+            max-width: 900px;
+            justify-content: center;
+        }
+
+        /* Interactive Portal Cards */
+        .portal-card {
+            flex: 1;
+            min-width: 280px;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            text-decoration: none;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .portal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .portal-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(56, 189, 248, 0.3);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5),
+                0 0 20px rgba(56, 189, 248, 0.1);
+        }
+
+        .portal-card:hover::before {
+            opacity: 1;
+        }
+
+        .icon-container {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.4s, box-shadow 0.4s;
+        }
+
+        .portal-card:hover .icon-container {
+            transform: scale(1.1);
+        }
+
+        .card-kiosk .icon-container {
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+            color: var(--primary);
+        }
+
+        .card-admin .icon-container {
+            box-shadow: 0 0 30px rgba(129, 140, 248, 0.2);
+            color: var(--secondary);
+        }
+
+        .portal-card h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .portal-card p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        /* Live Clock Ticker */
+        #live-clock {
+            position: fixed;
+            top: 2rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            z-index: 20;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .portals-grid {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .portal-card {
+                padding: 2rem 1.5rem;
+            }
+
+            #live-clock {
+                position: static;
+                margin-bottom: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Ambient glowing orbs -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <div id="live-clock">--:--</div>
+
+    <main>
+        <header>
+            <h1>Aura Iris</h1>
+            <p class="subtitle">Select a portal to access the facial recognition ecosystem.</p>
+        </header>
+
+        <div class="portals-grid">
+            <!-- Kiosk Link -->
+            <a href="/kiosk" class="portal-card card-kiosk">
+                <div class="icon-container">
+                    📷
+                </div>
+                <h2>Launch Kiosk</h2>
+                <p>Start the facial recognition scanner for employee check-ins and check-outs.</p>
+            </a>
+
+            <!-- Admin Link -->
+            <a href="/admin" class="portal-card card-admin">
+                <div class="icon-container">
+                    ⚙️
+                </div>
+                <h2>Admin Dashboard</h2>
+                <p>Manage employees, review attendance logs, and configure devices.</p>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        function startClock() {
+            const clockEl = document.getElementById("live-clock");
+            if (!clockEl) return;
+
+            function updateClock() {
+                const now = new Date();
+                const opts = {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                };
+                clockEl.innerText = now.toLocaleString(undefined, opts);
+            }
+
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        // Initialize clock on load
+        window.addEventListener('DOMContentLoaded', startClock);
+    </script>
+</body>
+
+</html>

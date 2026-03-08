@@ -59,64 +59,21 @@ async function trySaveDeviceKey() {
 document.addEventListener("DOMContentLoaded", () => {
     const saveBtn = document.getElementById("setup-save-btn");
     const gearBtn = document.getElementById("setup-gear-btn");
+    const adminBtn = document.getElementById("setup-admin-btn");
     const keyInput = document.getElementById("setup-api-key");
 
     if (saveBtn) saveBtn.addEventListener("click", trySaveDeviceKey);
+    if (adminBtn) adminBtn.addEventListener("click", () => window.location.href = "/");
     if (gearBtn) gearBtn.addEventListener("click", showSetupBanner);
     if (keyInput) keyInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") trySaveDeviceKey();
         if (e.key === "Escape") hideSetupBanner();
     });
 
-    // Admin Portal Navigation
     const adminLink = document.getElementById("admin-portal-link");
-    const pinModal = document.getElementById("kiosk-pin-modal");
-    const pinInput = document.getElementById("kiosk-admin-pin");
-    const pinErr = document.getElementById("kiosk-pin-err");
-    const verifyBtn = document.getElementById("verify-pin-btn");
-    const cancelBtn = document.getElementById("cancel-pin-btn");
-
     if (adminLink) {
         adminLink.addEventListener("click", () => {
-            pinModal.classList.add("show");
-            pinInput.value = "";
-            pinErr.innerText = "";
-            setTimeout(() => pinInput.focus(), 50);
-        });
-    }
-
-    if (cancelBtn) {
-        cancelBtn.addEventListener("click", () => pinModal.classList.remove("show"));
-    }
-
-    async function verifyAdminPin() {
-        const pin = pinInput.value;
-        if (!pin) return;
-
-        try {
-            const res = await fetch(`${API_BASE}/admin/verify-pin`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pin })
-            });
-
-            if (res.ok) {
-                window.location.href = "/admin";
-            } else {
-                pinErr.innerText = "Invalid PIN";
-                pinInput.classList.add("shake");
-                setTimeout(() => pinInput.classList.remove("shake"), 500);
-            }
-        } catch (e) {
-            pinErr.innerText = "Verification failed";
-        }
-    }
-
-    if (verifyBtn) verifyBtn.addEventListener("click", verifyAdminPin);
-    if (pinInput) {
-        pinInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") verifyAdminPin();
-            if (e.key === "Escape") pinModal.classList.remove("show");
+            window.location.href = "/admin";
         });
     }
 });
@@ -153,7 +110,16 @@ const MAX_QUEUE_SIZE = 100;
 // ── Initialization ──────────────────────────────────────────────────────────
 
 async function initKiosk() {
+    if (!DEVICE_KEY) {
+        showSetupBanner();
+        setFeedback("Kiosk not registered. Please enter API key.", true);
+        return;
+    }
+
     try {
+        // Initial heartbeat to verify key and get company name
+        sendHeartbeat();
+
         setFeedback("Loading AI models...");
         await Promise.all([
             faceapi.nets.ssdMobilenetv1.loadFromUri('/assets/models'),
@@ -179,8 +145,9 @@ async function initKiosk() {
         // 3 AM daily reload
         scheduleDailyReload();
 
-        // Initial calls
-        sendHeartbeat();
+        // Start clock
+        startClock();
+
         processOfflineQueue();
 
         // Add Enter key listener for the primary action button
@@ -493,11 +460,16 @@ async function sendHeartbeat() {
             setOnlineStatus(true);
             const data = await res.json();
 
-            // Display device name in the header
-            const locationEl = document.getElementById("kiosk-location");
+            // Display device/company name in the header
+            const companyDisp = document.getElementById("display-company-name");
             const mobileLocationEl = document.getElementById("mobile-kiosk-name");
-            if (data.device_name) {
-                if (locationEl) locationEl.innerText = `📍 ${data.device_name}`;
+
+            if (data.company_name) {
+                if (companyDisp) companyDisp.innerText = data.company_name;
+                document.title = `${data.company_name} - Kiosk`;
+                if (mobileLocationEl) mobileLocationEl.innerText = `📍 ${data.company_name}`;
+            } else if (data.device_name) {
+                if (companyDisp) companyDisp.innerText = data.device_name;
                 if (mobileLocationEl) mobileLocationEl.innerText = `📍 ${data.device_name}`;
             }
 
@@ -528,6 +500,28 @@ async function sendHeartbeat() {
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 
+function startClock() {
+    const clockEl = document.getElementById("live-clock");
+    if (!clockEl) return;
+
+    function updateClock() {
+        const now = new Date();
+        const opts = {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+        clockEl.innerText = now.toLocaleString(undefined, opts);
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+}
+
 function setFeedback(msg, isError = false) {
     EL.feedback.innerText = msg;
     EL.feedback.className = "feedback-msg " + (isError ? "error" : "success");
@@ -535,11 +529,11 @@ function setFeedback(msg, isError = false) {
 
 function setOnlineStatus(online) {
     if (online) {
-        EL.statusIndicator.classList.add("online");
-        EL.statusText.innerText = "Online";
+        if (EL.statusIndicator) EL.statusIndicator.classList.add("online");
+        if (EL.statusText) EL.statusText.innerText = "Online";
     } else {
-        EL.statusIndicator.classList.remove("online");
-        EL.statusText.innerText = "Offline";
+        if (EL.statusIndicator) EL.statusIndicator.classList.remove("online");
+        if (EL.statusText) EL.statusText.innerText = "Offline";
     }
 }
 

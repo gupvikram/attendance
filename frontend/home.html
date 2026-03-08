@@ -76,6 +76,20 @@
             opacity: 0.9;
         }
 
+        #setup-banner .btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #94a3b8;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            padding: 0.6rem 2rem;
+        }
+
+        #setup-banner .btn-secondary:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+        }
+
         #setup-err {
             color: #f87171;
             margin-top: 0.75rem;
@@ -234,35 +248,32 @@
         <input type="text" id="setup-api-key" placeholder="Paste API key here  (e.g. sk_...)">
         <div id="setup-err"></div>
         <button id="setup-save-btn">Connect &amp; Continue →</button>
+        <button id="setup-admin-btn" class="btn-secondary">Return Home</button>
     </div>
 
     <!-- Gear icon to re-open setup at any time -->
     <button id="setup-gear-btn" title="Device Settings">⚙</button>
 
     <header class="kiosk-header">
-        <div class="header-content">
-            <h1 id="kiosk-location">📍 Loading Kiosk...</h1>
-            <div id="device-status" class="status-indicator online">
-                <span class="dot"></span> <span class="status-text">Online</span>
+        <div class="header-content"
+            style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <h1 id="kiosk-location" style="margin: 0;">📍 <span id="display-company-name">Loading...</span></h1>
+                <div id="device-status" class="status-indicator online">
+                    <span class="dot"></span> <span class="status-text">Online</span>
+                </div>
             </div>
-            <button id="admin-portal-link">Admin Dashboard</button>
+
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div id="live-clock"
+                    style="font-size: 1.2rem; font-weight: 500; font-variant-numeric: tabular-nums; color: #fff; background: rgba(0,0,0,0.3); padding: 0.4rem 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                    --:--
+                </div>
+                <button id="admin-portal-link">Admin Dashboard</button>
+            </div>
         </div>
     </header>
 
-    <!-- ADMIN PIN MODAL -->
-    <div id="kiosk-pin-modal">
-        <div class="pin-modal-content">
-            <h2>Admin Portal</h2>
-            <p>Enter PIN to access dashboard</p>
-            <input type="password" id="kiosk-admin-pin" placeholder="••••" maxlength="8">
-            <div id="kiosk-pin-err" style="color: #f87171; margin-bottom: 1rem; font-size: 0.9rem; min-height: 1.2em;">
-            </div>
-            <div class="pin-actions">
-                <button class="btn-cancel" id="cancel-pin-btn">Cancel</button>
-                <button class="btn-verify" id="verify-pin-btn">Access →</button>
-            </div>
-        </div>
-    </div>
 
     <main class="kiosk-main">
         <div class="camera-container">
@@ -293,7 +304,7 @@
     </main>
 
     <!-- Maintenance menu (legacy, kept for queue display) -->
-    <div id="maintenance-trigger" style="position:fixed; bottom:0; right:0; width:50px; height:50px; z-index:9999;">
+    <div id="maintenance-trigger" style="position:fixed; bottom:0; left:0; width:50px; height:50px; z-index:9999;">
     </div>
     <div id="maintenance-menu" class="hidden">
         <h3>Maintenance Menu</h3>

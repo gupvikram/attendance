@@ -13,13 +13,35 @@
 
 <body>
     <div id="login-modal" class="modal">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="password" id="admin-pin" placeholder="Enter PIN">
-            <button id="login-btn" class="btn">Login</button>
-            <p id="login-msg" class="error hidden">Invalid PIN</p>
+        <div class="modal-content" style="max-width: 350px;">
+            <h2 id="auth-title">Admin Login</h2>
+
+            <div style="margin-bottom: 1rem; text-align: left;">
+                <label style="font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem; display: block;">Email</label>
+                <input type="email" id="admin-email" placeholder="admin@company.com"
+                    style="width: 100%; padding: 0.75rem;">
+            </div>
+
+            <div id="password-field" style="margin-bottom: 1rem; text-align: left;">
+                <label
+                    style="font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem; display: block;">Password</label>
+                <input type="password" id="admin-password" placeholder="••••••••"
+                    style="width: 100%; padding: 0.75rem;">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.85rem;">
+                <a href="#" id="toggle-reset-btn" style="color: var(--primary); text-decoration: none;">Forgot
+                    Password?</a>
+            </div>
+
+            <button id="login-btn" class="btn" style="width: 100%;">Login</button>
+
+            <p id="login-msg" class="error hidden" style="margin-top: 1rem;">Invalid credentials</p>
+            <p id="success-msg" class="success hidden"
+                style="margin-top: 1rem; color: var(--success); font-weight: 500;"></p>
         </div>
     </div>
+
 
     <!-- ADD EMPLOYEE MODAL -->
     <div id="employee-modal" class="modal hidden">
@@ -157,7 +179,9 @@
 
     <div id="app-content" class="hidden">
         <nav class="sidebar">
-            <h2 style="cursor: pointer;" onclick="window.location.href='/'">Admin Dashboard</h2>
+            <h2 style="cursor: pointer;" onclick="window.location.href='/'">
+                <span id="display-company-name">Admin Dashboard</span>
+            </h2>
             <ul class="nav-links">
                 <li data-tab="overview" class="active">Overview</li>
                 <li data-tab="attendance">Attendance <span id="missing-alert" class="badge hidden">!</span></li>
@@ -166,15 +190,24 @@
                 <li data-tab="shifts">Shifts</li>
                 <li data-tab="reports">Reports</li>
                 <li data-tab="settings">Settings</li>
+                <li data-tab="platform" id="nav-platform" class="hidden"
+                    style="color: var(--warning); border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem;">
+                    Platform Owner</li>
             </ul>
         </nav>
 
         <main class="content">
             <!-- OVERVIEW TAB -->
             <section id="tab-overview" class="tab-pane active">
-                <header>
+                <header style="display: flex; align-items: center; justify-content: space-between;">
                     <h1>Today's Overview</h1>
-                    <span id="overview-date" class="date-badge">Loading...</span>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span id="overview-date" class="date-badge">Loading...</span>
+                        <div id="live-clock"
+                            style="font-size: 1.1rem; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--primary); background: rgba(56, 189, 248, 0.1); padding: 0.3rem 0.8rem; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.2);">
+                            --:--
+                        </div>
+                    </div>
                 </header>
 
                 <div class="metrics-grid">
@@ -266,10 +299,8 @@
                                 <th>Name</th>
                                 <th>Role</th>
                                 <th>Shift</th>
-                                <th>Quality</th>
-                                <th>Last Auto-Updated</th>
+                                <th>Enrollment</th>
                                 <th>Status</th>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody><!-- Populated by JS --></tbody>
@@ -344,26 +375,22 @@
                     <h1>Settings</h1>
                 </header>
 
-                <div class="card" style="max-width: 500px;">
-                    <h2>Security</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Update your administrative access PIN.
-                    </p>
+
+                <div class="card" style="max-width: 500px; margin-top: 2rem;">
+                    <h2>Login Password</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Update your account password.</p>
 
                     <div style="margin-bottom: 1rem;">
-                        <label>Current PIN</label>
-                        <input type="password" id="current-pin" placeholder="••••">
-                    </div>
-                    <div style="margin-bottom: 1rem;">
-                        <label>New PIN</label>
-                        <input type="password" id="new-pin" placeholder="••••">
+                        <label>New Password</label>
+                        <input type="password" id="new-password" placeholder="••••••••">
                     </div>
                     <div style="margin-bottom: 1.5rem;">
-                        <label>Confirm New PIN</label>
-                        <input type="password" id="confirm-pin" placeholder="••••">
+                        <label>Confirm New Password</label>
+                        <input type="password" id="confirm-password" placeholder="••••••••">
                     </div>
 
-                    <button id="update-pin-btn" class="btn">Update PIN</button>
-                    <p id="pin-status-msg" class="feedback-msg hidden" style="margin-top: 1rem;"></p>
+                    <button id="update-password-btn" class="btn">Update Password</button>
+                    <p id="password-status-msg" class="feedback-msg hidden" style="margin-top: 1rem;"></p>
                 </div>
 
                 <div class="card" style="max-width: 500px; margin-top: 2rem; border-color: rgba(248, 113, 113, 0.2);">
@@ -375,7 +402,81 @@
                         the browser session.</p>
                 </div>
             </section>
+            <!-- PLATFORM TAB (Super Admin Only) -->
+            <section id="tab-platform" class="tab-pane hidden">
+                <header>
+                    <h1>Platform Management</h1>
+                    <button id="open-provision-modal" class="btn">+ Provision New Company</button>
+                </header>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Company Name</th>
+                                <th>Admin Email</th>
+                                <th>Created At</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="platform-companies-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
+    </div>
+
+    <!-- PROVISION MODAL -->
+    <div id="provision-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px; text-align: left;">
+            <h2>Provision New Company</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">This will create a company
+                and setup the primary administrator account.</p>
+
+            <div style="margin-bottom: 1rem;">
+                <label>Company Name</label>
+                <input type="text" id="prov-company-name" placeholder="Acme Industries">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label>Admin Email</label>
+                <input type="email" id="prov-admin-email" placeholder="ceo@acme.com">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap: 0.5rem; margin-top:1.5rem;">
+                <button id="close-provision-modal" class="btn btn-outline">Cancel</button>
+                <button id="save-provision-btn" class="btn">Create Company</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESET ADMIN MODAL -->
+    <div id="reset-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px; text-align: left;">
+            <h2>Reset Admin Access</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Update the email or password
+                for this company's administrator.</p>
+
+            <input type="hidden" id="reset-company-id">
+
+            <div style="margin-bottom: 1rem;">
+                <label>New Email (Optional)</label>
+                <input type="email" id="reset-admin-email" placeholder="new-email@acme.com">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label>New Password (Optional)</label>
+                <input type="password" id="reset-admin-password" placeholder="admin">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap: 0.5rem; margin-top:1.5rem;">
+                <button id="close-reset-modal" class="btn btn-outline">Cancel</button>
+                <button id="save-reset-btn" class="btn">Update Access</button>
+            </div>
+        </div>
     </div>
 
     <script src="/assets/js/admin.js"></script>

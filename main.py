@@ -101,6 +101,10 @@ app.mount("/assets", StaticFiles(directory="frontend/assets"), name="assets")
 # ── Page routes ───────────────────────────────────────────────────────────────
 
 @app.get("/")
+async def index():
+    return FileResponse("frontend/index.html")
+
+@app.get("/kiosk")
 async def kiosk():
     return FileResponse("frontend/home.html")
 

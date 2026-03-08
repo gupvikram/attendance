@@ -5,7 +5,21 @@
 const API_BASE = window.location.origin;
 
 // Simulate Admin auth token
-const ADMIN_TOKEN = localStorage.getItem("ADMIN_TOKEN") || "admin_demo_mode";
+const ADMIN_TOKEN = localStorage.getItem("ADMIN_TOKEN") || null;
+
+async function apiFetch(endpoint, options = {}) {
+    const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${ADMIN_TOKEN}`,
+        ...(options.headers || {})
+    };
+    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "API Error");
+    }
+    return await res.json();
+}
 
 const EL = {
     select: document.getElementById("employee-select"),
@@ -82,9 +96,7 @@ async function init() {
 
 async function loadEmployees() {
     try {
-        // In real app, passes auth header
-        const res = await fetch(`${API_BASE}/employees`);
-        const employees = await res.json();
+        const employees = await apiFetch("/employees");
 
         EL.select.innerHTML = '<option value="" disabled selected>Select employee...</option>';
         employees.forEach(emp => {
@@ -92,7 +104,7 @@ async function loadEmployees() {
             if (emp.active) {
                 const opt = document.createElement("option");
                 opt.value = emp.id;
-                opt.textContent = `${emp.name} ${emp.face_descriptors ? '(Re-enroll)' : '(New)'}`;
+                opt.textContent = emp.name;
                 EL.select.appendChild(opt);
             }
         });
@@ -223,22 +235,12 @@ async function submitEnrollment() {
 
     try {
         const empId = EL.select.value;
-        const res = await fetch(`${API_BASE}/employees/${empId}/enroll`, {
+        await apiFetch(`/employees/${empId}/enroll`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                // "Authorization": `Bearer ${ADMIN_TOKEN}` // (simulated admin auth)
-            },
             body: JSON.stringify(payload)
         });
 
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || "Failed to save enrollment");
-        }
-
-        const qualString = avgQuality < 0.20 ? "GOOD" : (avgQuality < 0.30 ? "FAIR" : "POOR");
-        setMsg(`Enrollment successful! (Quality: ${qualString})`, false);
+        setMsg("Enrollment successful!", false);
         EL.captureBtn.style.display = "none";
 
         // Reload selection in 2 secs

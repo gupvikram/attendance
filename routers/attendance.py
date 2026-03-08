@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger("attendance.scan")
 
 from core.config import supabase
-from core.deps import verify_device_key
+from core.deps import verify_device_key, require_admin_company
 from core.config import RECOGNITION_DISTANCE_THRESHOLD, WEAK_MATCH_UPPER
 from core.limiter import limiter
 from models.schemas import AttendanceScan, AttendanceManualUpdate
@@ -34,11 +34,12 @@ async def scan_attendance(
     now_iso = now_utc.isoformat()
     
     # 1. Verification
-    emp_res = supabase.table("employees").select("*").eq("id", payload.employee_id).eq("active", True).execute()
+    emp_res = supabase.table("employees").select("*").eq("id", payload.employee_id).eq("company_id", device["company_id"]).eq("active", True).execute()
     if not emp_res.data:
         # Log failure
         supabase.table("recognition_logs").insert({
             "device_id": device["id"],
+            "company_id": device["company_id"],
             "result": "failure",
             "match_distance": payload.match_distance
         }).execute()
@@ -50,6 +51,7 @@ async def scan_attendance(
     if payload.match_distance > WEAK_MATCH_UPPER:
         supabase.table("recognition_logs").insert({
             "device_id": device["id"],
+            "company_id": device["company_id"],
             "employee_id": payload.employee_id,
             "result": "failure",
             "match_distance": payload.match_distance
@@ -89,6 +91,7 @@ async def scan_attendance(
 
             supabase.table("attendance").insert({
                 "employee_id": employee["id"],
+                "company_id": device["company_id"],
                 "date": today,
                 "check_in_time": now_iso,
                 "check_in_location_id": device["location_id"],
@@ -126,6 +129,7 @@ async def scan_attendance(
         # 3. Write recognition_logs telemetry
         supabase.table("recognition_logs").insert({
             "device_id": device["id"],
+            "company_id": device["company_id"],
             "employee_id": employee["id"],
             "result": match_result,
             "match_distance": payload.match_distance
@@ -163,7 +167,7 @@ async def scan_attendance(
 
 
 @router.put("/{record_id}")
-async def update_attendance(record_id: int, payload: AttendanceManualUpdate):
+async def update_attendance(record_id: int, payload: AttendanceManualUpdate, company_id: str = Depends(require_admin_company)):
     """Admin manual corrections."""
     data = payload.model_dump(exclude_unset=True)
     admin_id = data.pop("admin_id", "admin")
@@ -173,7 +177,9 @@ async def update_attendance(record_id: int, payload: AttendanceManualUpdate):
     data["source"] = "manual"
 
     try:
-        res = supabase.table("attendance").update(data).eq("id", record_id).execute()
+        res = supabase.table("attendance").update(data).eq("id", record_id).eq("company_id", company_id).execute()
+        if not res.data:
+            raise HTTPException(404, "Attendance record not found or access denied")
         
         # Audit log
         supabase.table("admin_logs").insert({
@@ -185,14 +191,16 @@ async def update_attendance(record_id: int, payload: AttendanceManualUpdate):
         }).execute()
 
         return res.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e))
 
 @router.get("")
-async def query_attendance(date: str = None, employee_id: int = None):
-    """Fetch attendance records, optionally filtered by date or employee."""
+async def query_attendance(date: str = None, employee_id: int = None, company_id: str = Depends(require_admin_company)):
+    """Fetch attendance records, optionally filtered by date or employee. Admin only."""
     try:
-        query = supabase.table("attendance").select("*, employee:employees(name, role)")
+        query = supabase.table("attendance").select("*, employee:employees(name, role)").eq("company_id", company_id)
         
         if date:
             query = query.eq("date", date)

@@ -8,9 +8,16 @@ let ADMIN_TOKEN = localStorage.getItem("ADMIN_TOKEN") || null;
 const EL = {
     loginModal: document.getElementById("login-modal"),
     appContent: document.getElementById("app-content"),
-    pinInput: document.getElementById("admin-pin"),
+    emailInput: document.getElementById("admin-email"),
+    passwordInput: document.getElementById("admin-password"),
     loginBtn: document.getElementById("login-btn"),
     loginMsg: document.getElementById("login-msg"),
+    successMsg: document.getElementById("success-msg"),
+    authTitle: document.getElementById("auth-title"),
+    passwordField: document.getElementById("password-field"),
+    toggleResetBtn: document.getElementById("toggle-reset-btn"),
+
+
     navLinks: document.querySelectorAll(".nav-links li"),
     tabPanes: document.querySelectorAll(".tab-pane"),
     attDateFilter: document.getElementById("att-date-filter"),
@@ -35,8 +42,34 @@ const EL = {
     editAttModal: document.getElementById("edit-attendance-modal"),
     devModal: document.getElementById("device-modal"),
     shiftModal: document.getElementById("shift-modal"),
-    editShiftModal: document.getElementById("edit-shift-modal")
+    editShiftModal: document.getElementById("edit-shift-modal"),
+
+    // Platform Owner elements
+    navPlatform: document.getElementById("nav-platform"),
+    platformTbody: document.getElementById("platform-companies-tbody"),
+    provModal: document.getElementById("provision-modal"),
+    provNameInput: document.getElementById("prov-company-name"),
+    provEmailInput: document.getElementById("prov-admin-email"),
+    saveProvBtn: document.getElementById("save-provision-btn"),
+    closeProvBtn: document.getElementById("close-provision-modal"),
+    openProvBtn: document.getElementById("open-provision-modal"),
+
+    // Password Update
+    newPasswordInput: document.getElementById("new-password"),
+    confirmPasswordInput: document.getElementById("confirm-password"),
+    updatePasswordBtn: document.getElementById("update-password-btn"),
+    passwordStatusMsg: document.getElementById("password-status-msg"),
+
+    // Reset Admin Access
+    resetModal: document.getElementById("reset-modal"),
+    resetCompIdInput: document.getElementById("reset-company-id"),
+    resetEmailInput: document.getElementById("reset-admin-email"),
+    resetPassInput: document.getElementById("reset-admin-password"),
+    closeResetBtn: document.getElementById("close-reset-modal"),
+    saveResetBtn: document.getElementById("save-reset-btn"),
 };
+
+let CURRENT_USER_ROLE = localStorage.getItem("USER_ROLE") || null;
 
 // Data Caching for Details Modal
 let cachedEmployees = [];
@@ -53,39 +86,138 @@ function init() {
         EL.loginModal.classList.remove("hidden");
     }
 
-    EL.loginBtn.addEventListener("click", () => {
-        login();
-    });
+    let authMode = "login"; // login, signup, reset
 
-    EL.pinInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            login();
-        }
-    });
+    function setAuthMode(mode) {
+        authMode = mode;
+        EL.loginMsg.classList.add("hidden");
+        EL.successMsg.classList.add("hidden");
 
-    async function login() {
-        const pinEl = document.getElementById("admin-pin");
-        const pin = pinEl.value;
-        try {
-            const res = await fetch(`${API_BASE}/admin/verify-pin`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pin })
-            });
-            if (res.ok) {
-                ADMIN_TOKEN = "admin_verified";
-                localStorage.setItem("ADMIN_TOKEN", ADMIN_TOKEN);
-                showApp();
-            } else {
-                throw new Error("Invalid PIN");
-            }
-        } catch (err) {
-            pinEl.style.borderColor = "var(--danger)";
-            pinEl.classList.add("shake");
-            setTimeout(() => pinEl.classList.remove("shake"), 500);
-            EL.loginMsg.classList.remove("hidden");
+        if (mode === "login") {
+            EL.authTitle.innerText = "Admin Login";
+            EL.passwordField.classList.remove("hidden");
+            EL.loginBtn.innerText = "Login";
+            EL.toggleResetBtn.classList.remove("hidden");
+        } else if (mode === "reset") {
+            EL.authTitle.innerText = "Reset Password";
+            EL.passwordField.classList.add("hidden");
+            EL.loginBtn.innerText = "Send Reset Link";
+            EL.toggleResetBtn.classList.add("hidden");
+
+            // Add a back to login button dynamically if needed, or just allow Esc
+            // For now, reset password remains.
         }
     }
+
+    EL.toggleResetBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        setAuthMode("reset");
+    });
+
+    EL.loginBtn.addEventListener("click", () => {
+        if (authMode === "login") login();
+        else if (authMode === "reset") resetPassword();
+    });
+
+    const triggerAuth = (e) => {
+        if (e.key === "Enter") {
+            if (authMode === "login") login();
+            else if (authMode === "reset") resetPassword();
+        }
+    };
+
+    EL.passwordInput.addEventListener("keyup", triggerAuth);
+    EL.emailInput.addEventListener("keyup", triggerAuth);
+
+    async function login() {
+        const email = EL.emailInput.value.trim();
+        const password = EL.passwordInput.value;
+        const btn = EL.loginBtn;
+
+        if (!email || !password) {
+            EL.loginMsg.innerText = "Email and password required";
+            EL.loginMsg.classList.remove("hidden");
+            return;
+        }
+
+        btn.classList.add("loading");
+        btn.disabled = true;
+        EL.loginMsg.classList.add("hidden");
+
+        try {
+            const res = await fetch(`${API_BASE}/admin/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                ADMIN_TOKEN = data.access_token;
+                CURRENT_USER_ROLE = data.role;
+                localStorage.setItem("ADMIN_TOKEN", ADMIN_TOKEN);
+                localStorage.setItem("USER_ROLE", CURRENT_USER_ROLE);
+                if (data.company_name) {
+                    localStorage.setItem("COMPANY_NAME", data.company_name);
+                }
+                showApp();
+            } else {
+                const err = await res.json();
+                throw new Error(err.detail || "Invalid credentials");
+            }
+        } catch (err) {
+            EL.passwordInput.style.borderColor = "var(--danger)";
+            EL.passwordInput.classList.add("shake");
+            setTimeout(() => EL.passwordInput.classList.remove("shake"), 500);
+            EL.loginMsg.innerText = err.message || "Login failed";
+            EL.loginMsg.classList.remove("hidden");
+        } finally {
+            btn.classList.remove("loading");
+            btn.disabled = false;
+        }
+    }
+
+    async function resetPassword() {
+        const email = EL.emailInput.value.trim();
+        const btn = EL.loginBtn;
+
+        if (!email) {
+            EL.loginMsg.innerText = "Email is required";
+            EL.loginMsg.classList.remove("hidden");
+            return;
+        }
+
+        btn.classList.add("loading");
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE}/admin/reset-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email })
+            });
+            if (res.ok) {
+                EL.successMsg.innerText = "Reset link sent to your email!";
+                EL.successMsg.classList.remove("hidden");
+            } else {
+                const err = await res.json();
+                throw new Error(err.detail || "Failed to send reset link");
+            }
+        } catch (err) {
+            EL.loginMsg.innerText = err.message;
+            EL.loginMsg.classList.remove("hidden");
+        } finally {
+            btn.classList.remove("loading");
+            btn.disabled = false;
+        }
+    }
+
+    EL.openProvBtn.addEventListener("click", () => EL.provModal.classList.remove("hidden"));
+    EL.closeProvBtn.addEventListener("click", () => EL.provModal.classList.add("hidden"));
+    EL.saveProvBtn.addEventListener("click", provisionCompany);
+
+    EL.closeResetBtn.addEventListener("click", () => EL.resetModal.classList.add("hidden"));
+    EL.saveResetBtn.addEventListener("click", resetAdminAccess);
 
     // Add Escape key listener to close modals
     window.addEventListener("keydown", (e) => {
@@ -115,6 +247,7 @@ function init() {
         EL.detailsModal.classList.add("hidden");
     });
 
+
     // Tab Switching
     EL.navLinks.forEach(link => {
         link.addEventListener("click", (e) => {
@@ -143,11 +276,99 @@ function init() {
 
 function showApp() {
     EL.loginModal.classList.add("hidden");
-    EL.appContent.classList.remove("hidden");
+    if (EL.appContent) EL.appContent.classList.remove("hidden");
+
+    // Display company name in sidebar
+    const companyName = localStorage.getItem("COMPANY_NAME");
+    const companyDisp = document.getElementById("display-company-name");
+
+    if (companyDisp) {
+        if (CURRENT_USER_ROLE === 'super_admin') {
+            companyDisp.innerText = "Platform Management";
+            document.title = "Platform Management - Super Admin";
+        } else if (companyName) {
+            companyDisp.innerText = companyName;
+            document.title = `${companyName} - Admin Dashboard`;
+        }
+    }
+
+    // Show/Hide Platform tab based on role
+    if (CURRENT_USER_ROLE === 'super_admin') {
+        EL.navPlatform.classList.remove("hidden");
+    } else {
+        EL.navPlatform.classList.add("hidden");
+    }
+
     loadOverview();
+    startClock();
+}
+
+function startClock() {
+    const clockEl = document.getElementById("live-clock");
+    if (!clockEl) return;
+
+    function updateClock() {
+        const now = new Date();
+        const opts = {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+        clockEl.innerText = now.toLocaleString(undefined, opts);
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Bind Password Update
+    if (EL.updatePasswordBtn) {
+        EL.updatePasswordBtn.addEventListener("click", updatePassword);
+    }
+}
+
+async function updatePassword() {
+    const newPassword = EL.newPasswordInput.value;
+    const confirm = EL.confirmPasswordInput.value;
+
+    if (!newPassword || newPassword.length < 6) {
+        showStatus(EL.passwordStatusMsg, "Password must be at least 6 characters.", false);
+        return;
+    }
+    if (newPassword !== confirm) {
+        showStatus(EL.passwordStatusMsg, "Passwords do not match.", false);
+        return;
+    }
+
+    try {
+        await apiFetch("/admin/update-password", {
+            method: "POST",
+            body: JSON.stringify({ new_password: newPassword })
+        });
+        showStatus(EL.passwordStatusMsg, "Password updated successfully!", true);
+        EL.newPasswordInput.value = "";
+        EL.confirmPasswordInput.value = "";
+    } catch (e) {
+        showStatus(EL.passwordStatusMsg, "Failed to update password: " + e.message, false);
+    }
+}
+
+function showStatus(el, msg, isSuccess) {
+    if (!el) return;
+    el.innerText = msg;
+    el.classList.remove("hidden", "error", "success");
+    el.classList.add(isSuccess ? "success" : "error");
+    setTimeout(() => {
+        el.classList.add("hidden");
+    }, 5000);
 }
 
 function switchTab(tabName) {
+    if (tabName === "platform" && CURRENT_USER_ROLE !== 'super_admin') return;
+
     EL.navLinks.forEach(l => l.classList.remove("active"));
     document.querySelector(`[data-tab="${tabName}"]`).classList.add("active");
 
@@ -160,6 +381,7 @@ function switchTab(tabName) {
     if (tabName === "employees") loadEmployees();
     if (tabName === "devices") loadDevices();
     if (tabName === "shifts") loadShifts();
+    if (tabName === "platform") loadPlatformCompanies();
     if (tabName === "settings") {
         // Clear status message
         document.getElementById("pin-status-msg").classList.add("hidden");
@@ -175,16 +397,28 @@ function setupModalClose(modalId, closeBtnId) {
     }
 }
 
-// ── Data Fetching & Rendering (Mocks/Basic API calls) ───────────────────────
+// ── Data Fetching & Rendering (Real API calls) ──────────────────────────────
 
 async function apiFetch(endpoint, options = {}) {
     try {
         const headers = {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${ADMIN_TOKEN}`
+            "Authorization": `Bearer ${ADMIN_TOKEN}`,
+            ...(options.headers || {})
         };
-        const res = await fetch(`${API_BASE}${endpoint}`, { headers, ...options });
+
+        const finalOptions = {
+            ...options,
+            headers
+        };
+
+        const res = await fetch(`${API_BASE}${endpoint}`, finalOptions);
         if (!res.ok) {
+            if (res.status === 401) {
+                // Token expired or invalid
+                localStorage.removeItem("ADMIN_TOKEN");
+                window.location.reload();
+            }
             const err = await res.json();
             throw new Error(err.detail || "API Error");
         }
@@ -242,33 +476,33 @@ async function loadOverview() {
 
         // Render device cards
         const grid = document.getElementById("device-status-grid");
-        if (grid) grid.innerHTML = "";
+        if (grid) {
+            grid.innerHTML = "";
+            if (devices.length === 0) {
+                grid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 2rem; background: var(--surface); border-radius: 12px; border: 1px dashed var(--border);">
+                    <p style="color: var(--text-muted);">No devices registered for this company.</p>
+                    <a href="#" onclick="showTab('devices')" style="color: var(--primary); font-size: 0.9rem; text-decoration: none; margin-top: 0.5rem; display: inline-block;">+ Add your first device</a>
+                </div>`;
+            } else {
+                devices.forEach(dev => {
+                    const isOnline = dev.status === "online";
+                    const lastSeen = dev.last_heartbeat ? new Date(dev.last_heartbeat).toLocaleTimeString() : "Never";
 
-        // Mock device if DB empty for UI demonstration
-        const mockDevices = devices.length ? devices : [
-            { name: "Showroom Kiosk", status: "online", last_heartbeat: new Date().toISOString() },
-            { name: "Workshop App", status: "offline", last_heartbeat: new Date(Date.now() - 3600000).toISOString() }
-        ];
-
-        mockDevices.forEach(dev => {
-            const isOnline = dev.status === "online";
-            // Calculate basic uptime string (e.g. 9h 22m)
-            const uptime = isOnline ? "Uptime today: 4h 12m" : "Offline for 1h";
-
-            grid.innerHTML += `
-            <div class="device-card ${!isOnline ? 'offline' : ''}">
-                <div class="device-info">
-                    <h4>${dev.name}</h4>
-                    <p>Last heartbeat: ${new Date(dev.last_heartbeat).toLocaleTimeString()}</p>
-                    <p><strong>${uptime}</strong></p>
-                </div>
-                <div class="status-indicator ${isOnline ? 'online' : ''}">
-                    <span class="dot" style="background:${isOnline ? '#22c55e' : '#ef4444'}; width:12px; height:12px; border-radius:50%; display:inline-block;"></span>
-                    <span>${dev.status}</span>
-                </div>
-            </div>
-        `;
-        });
+                    grid.innerHTML += `
+                    <div class="device-card ${!isOnline ? 'offline' : ''}">
+                        <div class="device-info">
+                            <h4>${dev.name}</h4>
+                            <p>Last heartbeat: ${lastSeen}</p>
+                        </div>
+                        <div class="status-indicator ${isOnline ? 'online' : ''}">
+                            <span class="dot" style="background:${isOnline ? '#22c55e' : '#ef4444'}; width:12px; height:12px; border-radius:50%; display:inline-block;"></span>
+                            <span style="font-size: 0.85rem; font-weight: 600; color: ${isOnline ? '#22c55e' : '#ef4444'}">${isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+                        </div>
+                    </div>`;
+                });
+            }
+        }
 
         // Fetch and populate Recent Scan Failures
         const failuresTbody = document.querySelector("#failures-table tbody");
@@ -364,43 +598,49 @@ async function loadAttendance() {
 
 async function loadEmployees() {
     const tbody = document.querySelector("#employees-table tbody");
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading...</td></tr>';
 
     try {
         const data = await apiFetch("/employees");
 
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No employees found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No employees found</td></tr>';
             return;
         }
 
         tbody.innerHTML = "";
         data.forEach(emp => {
-            const quality = emp.enrollment_quality ?
-                (emp.enrollment_quality < 0.2 ? "GOOD" : (emp.enrollment_quality < 0.3 ? "FAIR" : "POOR")) : "N/A";
+            const enrollmentStatus = emp.face_descriptors ? "Enrolled" : "Not Enrolled";
 
             tbody.innerHTML += `
                 <tr>
                     <td><strong>${emp.name}</strong></td>
                     <td>${emp.role || "-"}</td>
                     <td>${emp.shift_id || "-"}</td>
-                    <td>${quality}</td>
-                    <td>${emp.descriptor_last_updated_at ? new Date(emp.descriptor_last_updated_at).toLocaleDateString() : "-"}</td>
-                    <td><span class="badge ${emp.active ? 'bg-success' : 'bg-danger'}">${emp.active ? 'Active' : 'Deactivated'}</span></td>
+                    <td>${enrollmentStatus}</td>
                     <td>
-                        <button class="btn btn-outline btn-sm delete-emp" data-id="${emp.id}" style="color:red; border-color:red; padding: 0.2rem 0.5rem; font-size: 0.8rem;">Deactivate</button>
+                        <label class="toggle-switch">
+                            <input type="checkbox" class="toggle-emp-status" data-id="${emp.id}" ${emp.active ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
                     </td>
                 </tr>
             `;
         });
 
-        // Attach deactivate handlers
-        document.querySelectorAll(".delete-emp").forEach(btn => {
-            btn.addEventListener("click", async (e) => {
+        // Attach status toggle handlers
+        document.querySelectorAll(".toggle-emp-status").forEach(toggle => {
+            toggle.addEventListener("change", async (e) => {
                 const id = e.target.dataset.id;
-                if (confirm("Are you sure you want to deactivate this employee?")) {
-                    await apiFetch(`/employees/${id}`, { method: "DELETE" });
-                    loadEmployees();
+                const newStatus = e.target.checked;
+                try {
+                    await apiFetch(`/employees/${id}`, {
+                        method: "PUT",
+                        body: JSON.stringify({ active: newStatus })
+                    });
+                } catch (err) {
+                    alert("Failed to update status: " + err.message);
+                    e.target.checked = !newStatus; // Revert visually on error
                 }
             });
         });
@@ -739,48 +979,6 @@ setupModalClose("edit-shift-modal", "close-edit-shift-modal");
         if (e.key === "Enter") document.getElementById("save-shift-btn").click();
     });
 });
-// Update PIN
-const updatePinBtn = document.getElementById("update-pin-btn");
-if (updatePinBtn) {
-    updatePinBtn.addEventListener("click", async () => {
-        const currentPin = document.getElementById("current-pin").value;
-        const newPin = document.getElementById("new-pin").value;
-        const confirmPin = document.getElementById("confirm-pin").value;
-        const statusMsg = document.getElementById("pin-status-msg");
-
-        if (!currentPin || !newPin || !confirmPin) {
-            statusMsg.innerText = "Please fill all fields";
-            statusMsg.className = "feedback-msg error";
-            statusMsg.classList.remove("hidden");
-            return;
-        }
-
-        if (newPin !== confirmPin) {
-            statusMsg.innerText = "New PINs do not match";
-            statusMsg.className = "feedback-msg error";
-            statusMsg.classList.remove("hidden");
-            return;
-        }
-
-        try {
-            await apiFetch("/admin/update-pin", {
-                method: "POST",
-                body: JSON.stringify({ current_pin: currentPin, new_pin: newPin })
-            });
-            statusMsg.innerText = "PIN updated successfully!";
-            statusMsg.className = "feedback-msg success";
-            statusMsg.classList.remove("hidden");
-            // Clear fields
-            document.getElementById("current-pin").value = "";
-            document.getElementById("new-pin").value = "";
-            document.getElementById("confirm-pin").value = "";
-        } catch (e) {
-            statusMsg.innerText = e.message;
-            statusMsg.className = "feedback-msg error";
-            statusMsg.classList.remove("hidden");
-        }
-    });
-}
 
 // Logout
 const logoutBtn = document.getElementById("logout-btn");
@@ -789,6 +987,133 @@ if (logoutBtn) {
         localStorage.removeItem("ADMIN_TOKEN");
         window.location.reload();
     });
+}
+
+// ── Platform Management (Super Admin) ────────────────────────────────────────
+
+async function loadPlatformCompanies() {
+    if (CURRENT_USER_ROLE !== 'super_admin') return;
+
+    try {
+        const companies = await apiFetch("/admin/companies");
+        if (!companies || companies.length === 0) {
+            EL.platformTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No companies found</td></tr>';
+            return;
+        }
+
+        EL.platformTbody.innerHTML = companies.map(c => `
+            <tr>
+                <td><strong>${c.name}</strong></td>
+                <td><span style="font-size: 0.9rem; color: var(--text-muted);">${c.admin_email || 'N/A'}</span></td>
+                <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                <td>
+                    <span class="status-tag ${c.is_active ? 'on_time' : 'absent'}">
+                        ${c.is_active ? 'ACTIVE' : 'SUSPENDED'}
+                    </span>
+                </td>
+                <td>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-outline" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" 
+                            onclick="toggleCompanyStatus('${c.id}', ${!c.is_active})">
+                            ${c.is_active ? 'Suspend' : 'Activate'}
+                        </button>
+                        <button class="btn btn-outline" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; border-color: var(--primary);" 
+                            onclick="openResetModal('${c.id}', '${c.name}')">
+                            Reset Access
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join("");
+    } catch (e) {
+        console.error("Failed to load companies", e);
+        EL.platformTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">Error: ${e.message}</td></tr>`;
+    }
+}
+
+window.toggleCompanyStatus = async function (id, targetStatus) {
+    if (!confirm(`Are you sure you want to ${targetStatus ? 'activate' : 'suspend'} this company?`)) return;
+    try {
+        await apiFetch("/admin/toggle-company", {
+            method: "POST",
+            body: JSON.stringify({ company_id: id, is_active: targetStatus })
+        });
+        loadPlatformCompanies();
+    } catch (e) {
+        alert("Action failed: " + e.message);
+    }
+};
+
+async function provisionCompany() {
+    const company_name = EL.provNameInput.value.trim();
+    const email = EL.provEmailInput.value.trim();
+    const btn = EL.saveProvBtn;
+
+    if (!company_name || !email) {
+        alert("Both company name and admin email are required.");
+        return;
+    }
+
+    btn.classList.add("loading");
+    btn.disabled = true;
+
+    try {
+        await apiFetch("/admin/provision", {
+            method: "POST",
+            body: JSON.stringify({ company_name, email })
+        });
+        EL.provModal.classList.add("hidden");
+        EL.provNameInput.value = "";
+        EL.provEmailInput.value = "";
+        loadPlatformCompanies();
+        alert("Provisioning successful! \n\nAccount created: " + email + "\nDefault Password: admin\n\nPlease share this with the client.");
+    } catch (e) {
+        alert("Provisioning failed: " + e.message);
+    } finally {
+        btn.classList.remove("loading");
+        btn.disabled = false;
+    }
+}
+
+window.openResetModal = function (id, name) {
+    EL.resetCompIdInput.value = id;
+    EL.resetEmailInput.value = "";
+    EL.resetPassInput.value = "";
+    EL.resetModal.classList.remove("hidden");
+};
+
+async function resetAdminAccess() {
+    const company_id = EL.resetCompIdInput.value;
+    const new_email = EL.resetEmailInput.value.trim();
+    const new_password = EL.resetPassInput.value;
+    const btn = EL.saveResetBtn;
+
+    if (!new_email && !new_password) {
+        alert("Please enter a new email or a new password.");
+        return;
+    }
+
+    btn.classList.add("loading");
+    btn.disabled = true;
+
+    try {
+        await apiFetch("/admin/reset-admin", {
+            method: "POST",
+            body: JSON.stringify({
+                company_id,
+                new_email: new_email || null,
+                new_password: new_password || null
+            })
+        });
+
+        EL.resetModal.classList.add("hidden");
+        alert("Admin access updated successfully!");
+    } catch (e) {
+        alert("Failed to reset access: " + e.message);
+    } finally {
+        btn.classList.remove("loading");
+        btn.disabled = false;
+    }
 }
 
 window.onload = init;
