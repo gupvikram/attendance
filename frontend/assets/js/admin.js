@@ -63,13 +63,23 @@ function init() {
         }
     });
 
-    function login() {
+    async function login() {
         const pinEl = document.getElementById("admin-pin");
-        if (pinEl.value === "1234") {
-            ADMIN_TOKEN = "admin_demo_token";
-            localStorage.setItem("ADMIN_TOKEN", ADMIN_TOKEN);
-            showApp();
-        } else {
+        const pin = pinEl.value;
+        try {
+            const res = await fetch(`${API_BASE}/admin/verify-pin`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin })
+            });
+            if (res.ok) {
+                ADMIN_TOKEN = "admin_verified";
+                localStorage.setItem("ADMIN_TOKEN", ADMIN_TOKEN);
+                showApp();
+            } else {
+                throw new Error("Invalid PIN");
+            }
+        } catch (err) {
             pinEl.style.borderColor = "var(--danger)";
             pinEl.classList.add("shake");
             setTimeout(() => pinEl.classList.remove("shake"), 500);
@@ -150,6 +160,10 @@ function switchTab(tabName) {
     if (tabName === "employees") loadEmployees();
     if (tabName === "devices") loadDevices();
     if (tabName === "shifts") loadShifts();
+    if (tabName === "settings") {
+        // Clear status message
+        document.getElementById("pin-status-msg").classList.add("hidden");
+    }
 }
 
 // Global modal close helpers
@@ -725,5 +739,56 @@ setupModalClose("edit-shift-modal", "close-edit-shift-modal");
         if (e.key === "Enter") document.getElementById("save-shift-btn").click();
     });
 });
+// Update PIN
+const updatePinBtn = document.getElementById("update-pin-btn");
+if (updatePinBtn) {
+    updatePinBtn.addEventListener("click", async () => {
+        const currentPin = document.getElementById("current-pin").value;
+        const newPin = document.getElementById("new-pin").value;
+        const confirmPin = document.getElementById("confirm-pin").value;
+        const statusMsg = document.getElementById("pin-status-msg");
+
+        if (!currentPin || !newPin || !confirmPin) {
+            statusMsg.innerText = "Please fill all fields";
+            statusMsg.className = "feedback-msg error";
+            statusMsg.classList.remove("hidden");
+            return;
+        }
+
+        if (newPin !== confirmPin) {
+            statusMsg.innerText = "New PINs do not match";
+            statusMsg.className = "feedback-msg error";
+            statusMsg.classList.remove("hidden");
+            return;
+        }
+
+        try {
+            await apiFetch("/admin/update-pin", {
+                method: "POST",
+                body: JSON.stringify({ current_pin: currentPin, new_pin: newPin })
+            });
+            statusMsg.innerText = "PIN updated successfully!";
+            statusMsg.className = "feedback-msg success";
+            statusMsg.classList.remove("hidden");
+            // Clear fields
+            document.getElementById("current-pin").value = "";
+            document.getElementById("new-pin").value = "";
+            document.getElementById("confirm-pin").value = "";
+        } catch (e) {
+            statusMsg.innerText = e.message;
+            statusMsg.className = "feedback-msg error";
+            statusMsg.classList.remove("hidden");
+        }
+    });
+}
+
+// Logout
+const logoutBtn = document.getElementById("logout-btn");
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+        localStorage.removeItem("ADMIN_TOKEN");
+        window.location.reload();
+    });
+}
 
 window.onload = init;

@@ -157,7 +157,7 @@
 
     <div id="app-content" class="hidden">
         <nav class="sidebar">
-            <h2>Admin Area</h2>
+            <h2 style="cursor: pointer;" onclick="window.location.href='/'">Admin Dashboard</h2>
             <ul class="nav-links">
                 <li data-tab="overview" class="active">Overview</li>
                 <li data-tab="attendance">Attendance <span id="missing-alert" class="badge hidden">!</span></li>
@@ -165,6 +165,7 @@
                 <li data-tab="devices">Devices</li>
                 <li data-tab="shifts">Shifts</li>
                 <li data-tab="reports">Reports</li>
+                <li data-tab="settings">Settings</li>
             </ul>
         </nav>
 
@@ -334,6 +335,44 @@
                         </div>
                         <button id="download-report-btn" class="btn">Download Excel (.xlsx)</button>
                     </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS TAB -->
+            <section id="tab-settings" class="tab-pane hidden">
+                <header>
+                    <h1>Settings</h1>
+                </header>
+
+                <div class="card" style="max-width: 500px;">
+                    <h2>Security</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Update your administrative access PIN.
+                    </p>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label>Current PIN</label>
+                        <input type="password" id="current-pin" placeholder="••••">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label>New PIN</label>
+                        <input type="password" id="new-pin" placeholder="••••">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label>Confirm New PIN</label>
+                        <input type="password" id="confirm-pin" placeholder="••••">
+                    </div>
+
+                    <button id="update-pin-btn" class="btn">Update PIN</button>
+                    <p id="pin-status-msg" class="feedback-msg hidden" style="margin-top: 1rem;"></p>
+                </div>
+
+                <div class="card" style="max-width: 500px; margin-top: 2rem; border-color: rgba(248, 113, 113, 0.2);">
+                    <h2 style="color: #f87171;">Danger Zone</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Be grateful with these settings.</p>
+                    <button id="logout-btn" class="btn btn-outline"
+                        style="color: #f87171; border-color: #f87171;">Logout from Browser</button>
+                    <p style="font-size: 0.8rem; margin-top: 1rem; color: var(--text-muted);">Note: Logout only clears
+                        the browser session.</p>
                 </div>
             </section>
         </main>

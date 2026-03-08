@@ -123,12 +123,13 @@ async def get_reports():
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 
-from routers import devices, employees, attendance, shifts, reports
+from routers import devices, employees, attendance, shifts, reports, admin
 app.include_router(devices.router)
 app.include_router(employees.router)
 app.include_router(attendance.router)
 app.include_router(shifts.router)
 app.include_router(reports.router)
+app.include_router(admin.router)
 
 # ── Health check ──────────────────────────────────────────────────────────────
 

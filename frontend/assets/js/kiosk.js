@@ -67,6 +67,58 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Enter") trySaveDeviceKey();
         if (e.key === "Escape") hideSetupBanner();
     });
+
+    // Admin Portal Navigation
+    const adminLink = document.getElementById("admin-portal-link");
+    const pinModal = document.getElementById("kiosk-pin-modal");
+    const pinInput = document.getElementById("kiosk-admin-pin");
+    const pinErr = document.getElementById("kiosk-pin-err");
+    const verifyBtn = document.getElementById("verify-pin-btn");
+    const cancelBtn = document.getElementById("cancel-pin-btn");
+
+    if (adminLink) {
+        adminLink.addEventListener("click", () => {
+            pinModal.classList.add("show");
+            pinInput.value = "";
+            pinErr.innerText = "";
+            setTimeout(() => pinInput.focus(), 50);
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener("click", () => pinModal.classList.remove("show"));
+    }
+
+    async function verifyAdminPin() {
+        const pin = pinInput.value;
+        if (!pin) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/admin/verify-pin`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin })
+            });
+
+            if (res.ok) {
+                window.location.href = "/admin";
+            } else {
+                pinErr.innerText = "Invalid PIN";
+                pinInput.classList.add("shake");
+                setTimeout(() => pinInput.classList.remove("shake"), 500);
+            }
+        } catch (e) {
+            pinErr.innerText = "Verification failed";
+        }
+    }
+
+    if (verifyBtn) verifyBtn.addEventListener("click", verifyAdminPin);
+    if (pinInput) {
+        pinInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") verifyAdminPin();
+            if (e.key === "Escape") pinModal.classList.remove("show");
+        });
+    }
 });
 
 let DEVICE_LOCATION_ID = 1;
@@ -443,8 +495,10 @@ async function sendHeartbeat() {
 
             // Display device name in the header
             const locationEl = document.getElementById("kiosk-location");
-            if (locationEl && data.device_name) {
-                locationEl.innerText = `📍 ${data.device_name}`;
+            const mobileLocationEl = document.getElementById("mobile-kiosk-name");
+            if (data.device_name) {
+                if (locationEl) locationEl.innerText = `📍 ${data.device_name}`;
+                if (mobileLocationEl) mobileLocationEl.innerText = `📍 ${data.device_name}`;
             }
 
             // Check time skew
