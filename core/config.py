@@ -10,7 +10,10 @@ RECOGNITION_DISTANCE_THRESHOLD = float(os.getenv("RECOGNITION_DISTANCE_THRESHOLD
 WEAK_MATCH_UPPER = 0.48
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set in .env")
+    raise RuntimeError(
+        "SUPABASE_URL and SUPABASE_KEY are missing. "
+        "Please add them to your Railway service's 'Variables' tab."
+    )
 
 # ── Global Supabase client ───────────────────────────────────────────────────
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)

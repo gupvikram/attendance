@@ -14,7 +14,7 @@ scheduler = BackgroundScheduler(timezone="UTC")
 
 def auto_absent_job():
     """Mark absent for all employees with no attendance row for today."""
-    from main import supabase
+    from core.config import supabase
     today = datetime.now(timezone.utc).date().isoformat()
 
     employees = supabase.table("employees").select("id").eq("active", True).execute().data
@@ -33,7 +33,7 @@ def auto_absent_job():
 
 def recognition_log_cleanup_job():
     """Delete recognition_logs older than 90 days."""
-    from main import supabase
+    from core.config import supabase
     cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
     supabase.table("recognition_logs").delete().lt("timestamp", cutoff).execute()
     print(f"[scheduler] recognition_logs cleanup: deleted rows older than {cutoff}")
@@ -41,7 +41,7 @@ def recognition_log_cleanup_job():
 
 def heartbeat_watchdog_job():
     """Mark devices offline if last_heartbeat > 5 minutes ago."""
-    from main import supabase
+    from core.config import supabase
     cutoff = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     supabase.table("devices").update({"status": "offline"}).lt("last_heartbeat", cutoff).eq("status", "online").execute()
 
