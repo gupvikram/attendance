@@ -14,6 +14,9 @@ async def verify_device_key(request: Request) -> dict:
     device = result.data[0]
     if not device.get("companies", {}).get("is_active", True):
         raise HTTPException(status_code=403, detail="Company account is suspended.")
+    
+    if device.get("active") is False:
+        raise HTTPException(status_code=403, detail="This kiosk device has been deactivated.")
         
     return device
 
