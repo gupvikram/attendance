@@ -113,7 +113,10 @@ async def scan_attendance(
             row = existing.data[0]
             
             # Allow immediate checkout by bypassing min_checkout_gap_minutes (or reducing to 1m to prevent double scans)
-            check_in = datetime.fromisoformat(row["check_in_time"].replace("Z", "+00:00"))
+            raw_check_in = row["check_in_time"]
+            clean_ts = raw_check_in.split('+')[0].replace('Z', '').split('.')[0]
+            check_in = datetime.fromisoformat(clean_ts).replace(tzinfo=timezone.utc)
+            
             if (now_utc - check_in).total_seconds() < 60: # Just 1 minute debounce
                 msg = f"Checkout not allowed yet, {employee['name']}"
                 logger.warning(f"Scan Rejected (Double Scan): {msg}")

@@ -152,11 +152,15 @@ async def get_employee_calendar(emp_id: int, month: str = None, company_id: str 
     for record in records:
         date = record["date"]
         
-        in_time = datetime.fromisoformat(record["check_in_time"].replace("Z", "+00:00"))
+        raw_in = record["check_in_time"]
+        in_clean = raw_in.split('+')[0].replace('Z', '').split('.')[0]
+        in_time = datetime.fromisoformat(in_clean).replace(tzinfo=timezone.utc)
         
         # If no checkout yet, cap it at current time (or shift end, but current time is safer for ongoing shifts)
         if record["check_out_time"]:
-            out_time = datetime.fromisoformat(record["check_out_time"].replace("Z", "+00:00"))
+            raw_out = record["check_out_time"]
+            out_clean = raw_out.split('+')[0].replace('Z', '').split('.')[0]
+            out_time = datetime.fromisoformat(out_clean).replace(tzinfo=timezone.utc)
         else:
             # Still checked in
             now = datetime.now(timezone.utc)
