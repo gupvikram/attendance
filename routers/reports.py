@@ -156,22 +156,18 @@ async def get_employee_calendar(emp_id: int, month: str = None, company_id: str 
         in_clean = raw_in.split('+')[0].replace('Z', '').split('.')[0]
         in_time = datetime.fromisoformat(in_clean).replace(tzinfo=timezone.utc)
         
-        # If no checkout yet, cap it at current time (or shift end, but current time is safer for ongoing shifts)
         if record["check_out_time"]:
             raw_out = record["check_out_time"]
             out_clean = raw_out.split('+')[0].replace('Z', '').split('.')[0]
             out_time = datetime.fromisoformat(out_clean).replace(tzinfo=timezone.utc)
+            duration_hours = (out_time - in_time).total_seconds() / 3600.0
         else:
-            # Still checked in
-            now = datetime.now(timezone.utc)
-            # If the check-in was from a previous day and they never checked out, cap it at end of that day
-            if in_time.date() < now.date():
-                out_time = in_time.replace(hour=23, minute=59, second=59)
-            else:
-                out_time = now
+            # Still checked in or forgot to check out
+            duration_hours = 0.0 # Don't count hours if incomplete, user must fix or checkout
+            if record["status"] != "absent":
+                # Only override if not already something else
+                record["status"] = "missing_checkout"
                 
-        duration_hours = (out_time - in_time).total_seconds() / 3600.0
-        
         if date not in daily_hours:
             daily_hours[date] = {"hours": 0.0, "status_list": []}
             

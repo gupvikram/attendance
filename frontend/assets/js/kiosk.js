@@ -465,7 +465,12 @@ async function sendHeartbeat() {
             const companyDisp = document.getElementById("display-company-name");
             const mobileLocationEl = document.getElementById("mobile-kiosk-name");
 
-            if (data.company_name) {
+            if (data.company_name && data.device_name) {
+                const combinedName = `${data.company_name} - ${data.device_name}`;
+                if (companyDisp) companyDisp.innerText = combinedName;
+                document.title = `${combinedName} - Kiosk`;
+                if (mobileLocationEl) mobileLocationEl.innerText = `📍 ${combinedName}`;
+            } else if (data.company_name) {
                 if (companyDisp) companyDisp.innerText = data.company_name;
                 document.title = `${data.company_name} - Kiosk`;
                 if (mobileLocationEl) mobileLocationEl.innerText = `📍 ${data.company_name}`;

@@ -492,7 +492,11 @@ async function loadOverview() {
 
         // Compute daily attendance stats
         const presentRecords = attendance.filter(a => a.status !== 'absent');
-        const presentCount = presentRecords.length;
+
+        // Count UNIQUE employees present today (since multiple checkins create multiple rows)
+        const presentEmployeeIds = new Set(presentRecords.map(a => a.employee_id));
+        const presentCount = presentEmployeeIds.size;
+
         const absentCount = totalEmployees - presentCount;
 
         let checkins = 0;
@@ -879,8 +883,8 @@ async function loadReports() {
                 const opt = document.createElement("option");
                 opt.value = emp.id;
                 opt.textContent = emp.name;
-                if (emp.created_at) {
-                    opt.dataset.created = emp.created_at.split('T')[0];
+                if (emp.enrolled_at) {
+                    opt.dataset.created = emp.enrolled_at.split('T')[0];
                 }
                 select.appendChild(opt);
             });
@@ -890,20 +894,37 @@ async function loadReports() {
     }
 }
 
-document.getElementById("view-heatmap-btn").addEventListener("click", async () => {
+document.getElementById("view-heatmap-btn").addEventListener("click", () => renderHeatmap());
+
+async function renderHeatmap(offsetMonths = 0) {
     const selectEl = document.getElementById("report-employee-select");
     const empId = selectEl.value;
-    const month = document.getElementById("report-month").value;
-    const container = document.getElementById("heatmap-container");
-    const grid = document.getElementById("calendar-grid");
+    const monthInput = document.getElementById("report-month");
 
-    if (!empId || !month) {
-        alert("Please select both a month and an employee.");
+    if (!empId || !monthInput.value) {
+        alert("Please select both an initial month and an employee.");
         return;
     }
 
+    // Apply offset if navigating
+    if (offsetMonths !== 0) {
+        const [y, m] = monthInput.value.split('-');
+        let date = new Date(parseInt(y), parseInt(m) - 1 + offsetMonths, 1);
+        monthInput.value = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+    }
+
+    const month = monthInput.value;
+    const container = document.getElementById("heatmap-container");
+    const grid = document.getElementById("calendar-grid");
+    const title = document.getElementById("heatmap-title");
+
     const selectedOption = selectEl.options[selectEl.selectedIndex];
-    const createdDateStr = selectedOption.dataset.created || "2000-01-01";
+    // IMPORTANT FIX: Parse the employee creation date correctly. 
+    // If it's undefined, default to a very old date.
+    let createdDateStr = "2000-01-01";
+    if (selectedOption && selectedOption.dataset.created) {
+        createdDateStr = selectedOption.dataset.created;
+    }
 
     const btn = document.getElementById("view-heatmap-btn");
     btn.disabled = true;
@@ -915,12 +936,24 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
         // Render Calendar
         container.classList.remove("hidden");
 
+        // Update Title to show the current month being viewed
+        const [yStr, mStr] = month.split('-');
+        const y = parseInt(yStr);
+        const m = parseInt(mStr);
+        const monthName = new Date(y, m - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        title.innerHTML = `
+            <div style="display:flex; align-items:center; gap: 1rem;">
+                <button onclick="renderHeatmap(-1)" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 1rem;">&larr;</button>
+                <span style="font-size: 1.2rem; font-weight: 600;">${monthName}</span>
+                <button onclick="renderHeatmap(1)" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 1rem;">&rarr;</button>
+            </div>
+        `;
+
         // Clear old cells (keep the 7 headers)
         while (grid.children.length > 7) {
             grid.removeChild(grid.lastChild);
         }
 
-        const [y, m] = month.split('-');
         const daysInMonth = new Date(y, m, 0).getDate();
         const firstDayOfWeek = new Date(y, m - 1, 1).getDay(); // 0 (Sun) to 6 (Sat)
 
@@ -933,7 +966,7 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
         const todayStr = new Date().toISOString().split('T')[0];
 
         for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${y}-${m}-${d.toString().padStart(2, '0')}`;
+            const dateStr = `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
             const dayData = data[dateStr] || { hours: 0, status: 'absent' };
             const hrs = dayData.hours;
             const isBeforeHire = dateStr < createdDateStr;
@@ -964,6 +997,9 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
                 if (dayData.status === 'absent') {
                     bgColor = "#991b1b"; // Full Red
                     textColor = "#ffffff";
+                } else if (dayData.status === 'missing_checkout') {
+                    bgColor = "#9333ea"; // Purple
+                    textColor = "#ffffff";
                 }
             }
 
@@ -986,6 +1022,8 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
                     labelText = `${h}h ${m}m`;
                 } else if (dayData.status === 'absent') {
                     labelText = 'ABS';
+                } else if (dayData.status === 'missing_checkout') {
+                    labelText = 'NO OUT';
                 }
             }
 
@@ -1003,7 +1041,10 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
         btn.disabled = false;
         btn.innerText = "View Heatmap";
     }
-});
+}
+
+// Ensure renderHeatmap is globally accessible for the inline onclick handlers in the title
+window.renderHeatmap = renderHeatmap;
 
 // ── Metric Details Pop-up logic ──────────────────────────────────────────────
 

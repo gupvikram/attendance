@@ -66,8 +66,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     status TEXT NOT NULL CHECK (status IN ('on_time', 'late', 'absent', 'checkout_missing')),
     source TEXT NOT NULL CHECK (source IN ('face_scan', 'manual', 'auto')),
     match_distance FLOAT,
-    notes TEXT,
-    CONSTRAINT unique_employee_date UNIQUE (employee_id, date)
+    notes TEXT
 );
 
 -- ── 4. Telemetry & Logs ────────────────────────────────────────────────────────

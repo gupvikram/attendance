@@ -89,12 +89,9 @@ async def scan_attendance(
             # Very simplistic local vs UTC math comparison
             is_late = now_utc > grace_dt
             
-            # If there's already a record for today, this is a return trip, not the initial "late" or "on_time" check-in.
-            # We will mark it as "return" to distinguish it from morning tardiness.
-            if existing.data:
-                att_status = "return"
-            else:
-                att_status = "late" if is_late else "on_time"
+            # Since "return" is likely not a valid enum in the DB causing a 400 error,
+            # we will just use "on_time" for subsequent checkins, or strictly re-evaluate.
+            att_status = "late" if is_late else "on_time"
 
             supabase.table("attendance").insert({
                 "employee_id": employee["id"],

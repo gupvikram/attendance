@@ -104,7 +104,8 @@ async function loadEmployees() {
             if (emp.active) {
                 const opt = document.createElement("option");
                 opt.value = emp.id;
-                opt.textContent = emp.name;
+                const status = emp.face_descriptors ? " (Re-enroll)" : " (Not enrolled yet)";
+                opt.textContent = emp.name + status;
                 EL.select.appendChild(opt);
             }
         });
