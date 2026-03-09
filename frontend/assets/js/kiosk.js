@@ -237,7 +237,8 @@ async function fetchEmployeeDescriptors() {
         // We set it slightly high here so we can capture 'weak_match' objects.
         // We will reject matches > 0.48 manually.
         if (labeledDescriptors.length > 0) {
-            faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.48);
+            // Increased from 0.48 to 0.52 to match backend WEAK_MATCH_UPPER
+            faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.52);
             console.log(`Loaded ${validEmployees.length} employees. Version: ${descriptorVersion}`);
         } else {
             faceMatcher = null;
@@ -276,8 +277,8 @@ EL.scanBtn.addEventListener("click", async () => {
         // 4. Lighting normalization (Grayscale)
         const normCanvas = getNormalizedCanvas();
 
-        // 5. Detection on normalized canvas
-        const detection = await faceapi.detectSingleFace(normCanvas)
+        // 5. Detection on normalized canvas (Lowered confidence to 0.35 for angled faces)
+        const detection = await faceapi.detectSingleFace(normCanvas, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.35 }))
             .withFaceLandmarks()
             .withFaceDescriptor();
 
@@ -295,8 +296,8 @@ EL.scanBtn.addEventListener("click", async () => {
         // Match against database
         const match = faceMatcher.findBestMatch(detection.descriptor);
 
-        if (match.label === "unknown" || match.distance > 0.48) {
-            throw new Error("Face not recognized.\n• Stand closer\n• Ensure lighting is bright\n• Look directly at camera");
+        if (match.label === "unknown" || match.distance > 0.52) {
+            throw new Error("Face not recognized.\n• Stand closer\n• Ensure lighting is bright");
         }
 
         const empId = parseInt(match.label);
