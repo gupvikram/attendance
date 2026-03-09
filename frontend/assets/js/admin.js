@@ -160,6 +160,8 @@ function init() {
                 if (data.company_name) {
                     localStorage.setItem("COMPANY_NAME", data.company_name);
                 }
+                if (data.email) localStorage.setItem("USER_EMAIL", data.email);
+                if (data.full_name) localStorage.setItem("USER_FULLNAME", data.full_name);
                 showApp();
             } else {
                 const err = await res.json();
@@ -290,6 +292,24 @@ function showApp() {
             companyDisp.innerText = companyName;
             document.title = `${companyName} - Admin Dashboard`;
         }
+    }
+
+    // Display user profile in sidebar
+    const userEmail = localStorage.getItem("USER_EMAIL");
+    const userFullName = localStorage.getItem("USER_FULLNAME");
+    const profileNameEl = document.getElementById("sidebar-user-name");
+    const profileEmailEl = document.getElementById("sidebar-user-email");
+    const profileInitialEl = document.getElementById("sidebar-user-initial");
+
+    if (userFullName) {
+        if (profileNameEl) profileNameEl.innerText = userFullName;
+        if (profileInitialEl) profileInitialEl.innerText = userFullName.charAt(0).toUpperCase();
+    } else {
+        if (profileNameEl) profileNameEl.innerText = CURRENT_USER_ROLE === 'super_admin' ? 'Super Admin' : 'Admin';
+        if (profileInitialEl) profileInitialEl.innerText = 'A';
+    }
+    if (userEmail && profileEmailEl) {
+        profileEmailEl.innerText = userEmail;
     }
 
     // Show/Hide Platform tab based on role
@@ -1010,6 +1030,10 @@ const logoutBtn = document.getElementById("logout-btn");
 if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
         localStorage.removeItem("ADMIN_TOKEN");
+        localStorage.removeItem("USER_ROLE");
+        localStorage.removeItem("COMPANY_NAME");
+        localStorage.removeItem("USER_EMAIL");
+        localStorage.removeItem("USER_FULLNAME");
         window.location.reload();
     });
 }

@@ -40,7 +40,7 @@ async def login_with_email(payload: EmailLogin):
         uid = res.user.id
         print(f"[AUTH] Login successful for UID: {uid}")
         # Get role and company
-        profile_res = supabase.table("user_profiles").select("role, company_id, companies(name)").eq("id", uid).execute()
+        profile_res = supabase.table("user_profiles").select("role, company_id, email, full_name, companies(name)").eq("id", uid).execute()
         
         if not profile_res.data:
             raise Exception("User profile not found")
@@ -51,9 +51,11 @@ async def login_with_email(payload: EmailLogin):
         return {
             "access_token": res.session.access_token, 
             "user": uid,
-            "role": profile["role"],
-            "company_id": profile["company_id"],
-            "company_name": company_name
+            "role": profile.get("role"),
+            "company_id": profile.get("company_id"),
+            "company_name": company_name,
+            "email": profile.get("email"),
+            "full_name": profile.get("full_name")
         }
     except Exception as e:
         print(f"[AUTH ERROR] {str(e)}")

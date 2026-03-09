@@ -178,22 +178,40 @@
     </div>
 
     <div id="app-content" class="hidden">
-        <nav class="sidebar">
-            <h2 style="cursor: pointer;" onclick="window.location.href='/'">
-                <span id="display-company-name">Admin Dashboard</span>
-            </h2>
-            <ul class="nav-links">
-                <li data-tab="overview" class="active">Overview</li>
-                <li data-tab="attendance">Attendance <span id="missing-alert" class="badge hidden">!</span></li>
-                <li data-tab="employees">Employees</li>
-                <li data-tab="devices">Devices</li>
-                <li data-tab="shifts">Shifts</li>
-                <li data-tab="reports">Reports</li>
-                <li data-tab="settings">Settings</li>
-                <li data-tab="platform" id="nav-platform" class="hidden"
-                    style="color: var(--warning); border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem;">
-                    Platform Owner</li>
-            </ul>
+        <nav class="sidebar" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h2 style="cursor: pointer;" onclick="window.location.href='/'">
+                    <span id="display-company-name">Admin Dashboard</span>
+                </h2>
+                <ul class="nav-links">
+                    <li data-tab="overview" class="active">Overview</li>
+                    <li data-tab="attendance">Attendance <span id="missing-alert" class="badge hidden">!</span></li>
+                    <li data-tab="employees">Employees</li>
+                    <li data-tab="devices">Devices</li>
+                    <li data-tab="shifts">Shifts</li>
+                    <li data-tab="reports">Reports</li>
+                    <li data-tab="settings">Settings</li>
+                    <li data-tab="platform" id="nav-platform" class="hidden"
+                        style="color: var(--warning); border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem;">
+                        Platform Owner</li>
+                </ul>
+            </div>
+
+            <div
+                style="padding: 1.5rem 2rem; border-top: 1px solid var(--border); margin-top: auto; display: flex; align-items: center; gap: 0.75rem;">
+                <div
+                    style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem; flex-shrink: 0; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);">
+                    <span id="sidebar-user-initial">A</span>
+                </div>
+                <div style="overflow: hidden;">
+                    <div id="sidebar-user-name"
+                        style="font-weight: 600; font-size: 0.95rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        Loading...</div>
+                    <div id="sidebar-user-email"
+                        style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    </div>
+                </div>
+            </div>
         </nav>
 
         <main class="content">
