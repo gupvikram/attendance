@@ -930,16 +930,19 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
             grid.appendChild(empty);
         }
 
+        const todayStr = new Date().toISOString().split('T')[0];
+
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${y}-${m}-${d.toString().padStart(2, '0')}`;
             const dayData = data[dateStr] || { hours: 0, status: 'absent' };
             const hrs = dayData.hours;
             const isBeforeHire = dateStr < createdDateStr;
+            const isFuture = dateStr > todayStr;
 
             let bgColor = "#fecaca"; // < 2 hrs (light red)
             let textColor = "#991b1b";
 
-            if (isBeforeHire) {
+            if (isBeforeHire || isFuture) {
                 bgColor = "var(--bg-subtle)";
                 textColor = "var(--text-muted)";
             } else if (hrs >= 8) {
@@ -976,9 +979,11 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
             cell.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
 
             let labelText = '-';
-            if (!isBeforeHire) {
+            if (!isBeforeHire && !isFuture) {
                 if (hrs > 0) {
-                    labelText = hrs.toFixed(1) + 'h';
+                    const h = Math.floor(hrs);
+                    const m = Math.round((hrs - h) * 60);
+                    labelText = `${h}h ${m}m`;
                 } else if (dayData.status === 'absent') {
                     labelText = 'ABS';
                 }
