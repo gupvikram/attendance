@@ -559,7 +559,7 @@ async function loadOverview() {
                 } else {
                     failuresTbody.innerHTML = "";
                     failures.forEach(f => {
-                        const timeStr = new Date(f.created_at).toLocaleString();
+                        const timeStr = f.timestamp ? new Date(f.timestamp).toLocaleString() : '-';
                         const empName = f.employee ? f.employee.name : f.employee_id;
                         const devName = f.device ? f.device.name : 'Unknown Device';
                         const distStr = f.match_distance ? f.match_distance.toFixed(3) : '-';
