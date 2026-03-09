@@ -411,6 +411,7 @@ function switchTab(tabName) {
     if (tabName === "devices") loadDevices();
     if (tabName === "shifts") loadShifts();
     if (tabName === "platform") loadPlatformCompanies();
+    if (tabName === "reports") loadReports();
     if (tabName === "settings") {
         // Clear status message
         const statusMsg = document.getElementById("pin-status-msg");
@@ -865,6 +866,121 @@ function downloadReport() {
     const month = document.getElementById("report-month").value;
     window.location.href = `${API_BASE}/reports/monthly/export?month=${month}`;
 }
+
+// ── Reports & Heatmap Logic ────────────────────────────────────────────────
+
+async function loadReports() {
+    const select = document.getElementById("report-employee-select");
+    if (select.options.length <= 1) {
+        try {
+            const employees = await apiFetch("/employees");
+            // Populate dropdown
+            employees.forEach(emp => {
+                const opt = document.createElement("option");
+                opt.value = emp.id;
+                opt.textContent = emp.name;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            console.error("Failed to load employees for report", e);
+        }
+    }
+}
+
+document.getElementById("view-heatmap-btn").addEventListener("click", async () => {
+    const empId = document.getElementById("report-employee-select").value;
+    const month = document.getElementById("report-month").value;
+    const container = document.getElementById("heatmap-container");
+    const grid = document.getElementById("calendar-grid");
+
+    if (!empId || !month) {
+        alert("Please select both a month and an employee.");
+        return;
+    }
+
+    const btn = document.getElementById("view-heatmap-btn");
+    btn.disabled = true;
+    btn.innerText = "Loading...";
+
+    try {
+        const data = await apiFetch(`/reports/employee/${empId}/calendar?month=${month}`);
+
+        // Render Calendar
+        container.classList.remove("hidden");
+
+        // Clear old cells (keep the 7 headers)
+        while (grid.children.length > 7) {
+            grid.removeChild(grid.lastChild);
+        }
+
+        const [y, m] = month.split('-');
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const firstDayOfWeek = new Date(y, m - 1, 1).getDay(); // 0 (Sun) to 6 (Sat)
+
+        // Empty slots for start of month
+        for (let i = 0; i < firstDayOfWeek; i++) {
+            const empty = document.createElement("div");
+            grid.appendChild(empty);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${y}-${m}-${d.toString().padStart(2, '0')}`;
+            const dayData = data[dateStr] || { hours: 0, status: 'absent' };
+            const hrs = dayData.hours;
+
+            let bgColor = "#fecaca"; // < 2 hrs (light red)
+            let textColor = "#991b1b";
+
+            if (hrs >= 8) {
+                bgColor = "#166534"; // Dark Green
+                textColor = "#ffffff";
+            } else if (hrs >= 6) {
+                bgColor = "#22c55e"; // Light Green
+                textColor = "#ffffff";
+            } else if (hrs >= 4) {
+                bgColor = "#eab308"; // Yellow
+                textColor = "#ffffff";
+            } else if (hrs >= 2) {
+                bgColor = "#f87171"; // Red
+                textColor = "#ffffff";
+            }
+
+            if (hrs === 0) {
+                bgColor = "var(--bg-subtle)";
+                textColor = "var(--text-muted)";
+                // Outline if absent
+                if (dayData.status === 'absent') {
+                    bgColor = "#991b1b"; // Full Red
+                    textColor = "#ffffff";
+                }
+            }
+
+            const cell = document.createElement("div");
+            cell.style.padding = "0.75rem 0.5rem";
+            cell.style.borderRadius = "8px";
+            cell.style.backgroundColor = bgColor;
+            cell.style.color = textColor;
+            cell.style.display = "flex";
+            cell.style.flexDirection = "column";
+            cell.style.alignItems = "center";
+            cell.style.justifyContent = "center";
+            cell.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
+
+            cell.innerHTML = `
+                <span style="font-size: 0.9rem; font-weight: 600; opacity: 0.9;">${d}</span>
+                <span style="font-size: 0.75rem; font-weight: 500; margin-top: 0.2rem;">${hrs > 0 ? hrs.toFixed(1) + 'h' : (dayData.status === 'absent' ? 'ABS' : '-')}</span>
+            `;
+
+            grid.appendChild(cell);
+        }
+
+    } catch (e) {
+        alert("Failed to load heatmap: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "View Heatmap";
+    }
+});
 
 // ── Metric Details Pop-up logic ──────────────────────────────────────────────
 

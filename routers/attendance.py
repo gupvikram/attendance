@@ -73,21 +73,28 @@ async def scan_attendance(
         if shift_res.data:
             shift = shift_res.data[0]
 
-    # Does row exist for today?
-    existing = supabase.table("attendance").select("*").eq("employee_id", employee["id"]).eq("date", today).execute()
+    # Find the MOST RECENT attendance record for today
+    existing = supabase.table("attendance").select("*").eq("employee_id", employee["id"]).eq("date", today).order("check_in_time", desc=True).limit(1).execute()
     
     action, response_status = "unknown", "success"
     try:
-        if not existing.data:
+        # If no record today, OR the most recent record already has a checkout (meaning they left), perform a Check-in.
+        if not existing.data or existing.data[0]["check_out_time"] is not None:
             # Check In
-            # Calculate status based on time
+            # Calculate status based on time (only really relevant for the first check-in of the day)
             shift_start = datetime.strptime(shift["start_time"], "%H:%M:%S").time()
             check_in_dt = datetime.combine(now_utc.date(), shift_start).replace(tzinfo=timezone.utc)
             grace_dt = check_in_dt.replace(minute=check_in_dt.minute + shift.get("grace_period_minutes", 15))
             
-            # Very simplistic local vs UTC math comparison (improve for production)
+            # Very simplistic local vs UTC math comparison
             is_late = now_utc > grace_dt
-            att_status = "late" if is_late else "on_time"
+            
+            # If there's already a record for today, this is a return trip, not the initial "late" or "on_time" check-in.
+            # We will mark it as "return" to distinguish it from morning tardiness.
+            if existing.data:
+                att_status = "return"
+            else:
+                att_status = "late" if is_late else "on_time"
 
             supabase.table("attendance").insert({
                 "employee_id": employee["id"],
@@ -104,11 +111,7 @@ async def scan_attendance(
         else:
             # Check Out
             row = existing.data[0]
-            if row["check_out_time"] is not None:
-                msg = f"Already checked out today, {employee['name']}"
-                logger.warning(f"Scan Rejected: {msg}")
-                raise HTTPException(400, msg)
-
+            
             # Validate checkout gap
             check_in = datetime.fromisoformat(row["check_in_time"].replace("Z", "+00:00"))
             if (now_utc - check_in).total_seconds() < (shift.get("min_checkout_gap_minutes", 60) * 60):
@@ -119,7 +122,6 @@ async def scan_attendance(
             supabase.table("attendance").update({
                 "check_out_time": now_iso,
                 "check_out_location_id": device["location_id"],
-                # Keep match_distance of the check-in? Or update? We will just update it for simplicity.
                 "match_distance": payload.match_distance
             }).eq("id", row["id"]).execute()
             action = "check_out"

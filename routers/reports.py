@@ -116,3 +116,73 @@ async def get_recent_failures(limit: int = 20, company_id: str = Depends(require
         logger = logging.getLogger("attendance.reports")
         logger.error(f"FAILED to fetch recognition logs: {str(e)}")
         raise HTTPException(500, str(e))
+
+@router.get("/employee/{emp_id}/calendar")
+async def get_employee_calendar(emp_id: int, month: str = None, company_id: str = Depends(require_admin_company)):
+    """
+    Get detailed daily hour calculations for an employee's monthly calendar.
+    Month format: YYYY-MM.
+    """
+    if not month:
+        month = datetime.now(timezone.utc).strftime("%Y-%m")
+        
+    start_date = f"{month}-01"
+    
+    y, m = map(int, month.split('-'))
+    if m == 12:
+        end_date = f"{y+1}-01-01"
+    else:
+        end_date = f"{y}-{m+1:02d}-01"
+
+    # Fetch all attendance records for this employee in the given month
+    att_res = supabase.table("attendance") \
+        .select("*") \
+        .eq("company_id", company_id) \
+        .eq("employee_id", emp_id) \
+        .gte("date", start_date) \
+        .lt("date", end_date) \
+        .order("check_in_time", desc=False) \
+        .execute()
+        
+    records = att_res.data
+    
+    daily_hours = {}
+    
+    # Process multiple check-ins per day
+    for record in records:
+        date = record["date"]
+        
+        in_time = datetime.fromisoformat(record["check_in_time"].replace("Z", "+00:00"))
+        
+        # If no checkout yet, cap it at current time (or shift end, but current time is safer for ongoing shifts)
+        if record["check_out_time"]:
+            out_time = datetime.fromisoformat(record["check_out_time"].replace("Z", "+00:00"))
+        else:
+            # Still checked in
+            now = datetime.now(timezone.utc)
+            # If the check-in was from a previous day and they never checked out, cap it at end of that day
+            if in_time.date() < now.date():
+                out_time = in_time.replace(hour=23, minute=59, second=59)
+            else:
+                out_time = now
+                
+        duration_hours = (out_time - in_time).total_seconds() / 3600.0
+        
+        if date not in daily_hours:
+            daily_hours[date] = {"hours": 0.0, "status_list": []}
+            
+        daily_hours[date]["hours"] += duration_hours
+        daily_hours[date]["status_list"].append(record["status"])
+
+    # Format output for the frontend
+    # frontend just needs { "YYYY-MM-DD": { "hours": 6.5, "status": "on_time" } }
+    result = {}
+    for date, data in daily_hours.items():
+        # Use the first scan's status as the day's primary status (e.g. late vs on_time)
+        primary_status = data["status_list"][0] if data["status_list"] else "absent"
+        result[date] = {
+            "hours": round(data["hours"], 2),
+            "status": primary_status
+        }
+        
+    return result

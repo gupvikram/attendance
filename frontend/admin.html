@@ -373,15 +373,97 @@
             <!-- REPORTS TAB -->
             <section id="tab-reports" class="tab-pane hidden">
                 <header>
-                    <h1>Monthly Reports</h1>
+                    <h1>Reports & Heatmaps</h1>
                 </header>
-                <div class="card">
-                    <div style="display:flex; gap: 1rem; align-items:flex-end;">
-                        <div style="display:flex; flex-direction:column;">
-                            <label>Select Month</label>
-                            <input type="month" id="report-month">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                    <!-- Company Overview Export -->
+                    <div class="card" style="margin: 0;">
+                        <h2 style="margin-top: 0;">Company Overview</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Export full monthly
+                            attendance summary to Excel.</p>
+                        <div style="display:flex; gap: 1rem; align-items:flex-end;">
+                            <div style="display:flex; flex-direction:column;">
+                                <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Select
+                                    Month</label>
+                                <input type="month" id="report-month"
+                                    style="padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px;">
+                            </div>
+                            <button id="download-report-btn" class="btn">Download Excel</button>
                         </div>
-                        <button id="download-report-btn" class="btn">Download Excel (.xlsx)</button>
+                    </div>
+
+                    <!-- Employee Specific Heatmap Controls -->
+                    <div class="card" style="margin: 0;">
+                        <h2 style="margin-top: 0;">Employee Heatmap</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">View specific daily
+                            working hours.</p>
+                        <div style="display:flex; gap: 1rem; align-items:flex-end;">
+                            <div style="display:flex; flex-direction:column; flex: 1;">
+                                <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Select
+                                    Employee</label>
+                                <select id="report-employee-select"
+                                    style="padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px;">
+                                    <option value="">Select an employee...</option>
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <button id="view-heatmap-btn" class="btn btn-outline">View Heatmap</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Calendar Heatmap Display -->
+                <div id="heatmap-container" class="card hidden">
+                    <header
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                        <h2 id="heatmap-title" style="margin: 0;">Employee Heatmap</h2>
+                        <div style="display: flex; gap: 1rem; font-size: 0.8rem; font-weight: 500;">
+                            <span style="display:flex; align-items:center; gap:0.3rem;">
+                                <div style="width:12px; height:12px; border-radius:3px; background:#166534;"></div> 8+
+                                hrs
+                            </span>
+                            <span style="display:flex; align-items:center; gap:0.3rem;">
+                                <div style="width:12px; height:12px; border-radius:3px; background:#22c55e;"></div> 6-8
+                                hrs
+                            </span>
+                            <span style="display:flex; align-items:center; gap:0.3rem;">
+                                <div style="width:12px; height:12px; border-radius:3px; background:#eab308;"></div> 4-6
+                                hrs
+                            </span>
+                            <span style="display:flex; align-items:center; gap:0.3rem;">
+                                <div style="width:12px; height:12px; border-radius:3px; background:#f87171;"></div> 2-4
+                                hrs
+                            </span>
+                            <span style="display:flex; align-items:center; gap:0.3rem;">
+                                <div style="width:12px; height:12px; border-radius:3px; background:#fecaca;"></div>
+                                < 2 hrs</span>
+                                    <span style="display:flex; align-items:center; gap:0.3rem;">
+                                        <div style="width:12px; height:12px; border-radius:3px; background:#991b1b;">
+                                        </div> Absent
+                                    </span>
+                        </div>
+                    </header>
+
+                    <div id="calendar-grid"
+                        style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center;">
+                        <!-- Days of week -->
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
+                            Sun</div>
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
+                            Mon</div>
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
+                            Tue</div>
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
+                            Wed</div>
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
+                            Thu</div>
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
+                            Fri</div>
+                        <div style="font-weight: 600; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem;">
+                            Sat</div>
+
+                        <!-- Grid cells injected by JS -->
                     </div>
                 </div>
             </section>
