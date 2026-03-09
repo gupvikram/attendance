@@ -162,7 +162,7 @@ function init() {
                 }
                 if (data.email) localStorage.setItem("USER_EMAIL", data.email);
                 if (data.full_name) localStorage.setItem("USER_FULLNAME", data.full_name);
-                showApp();
+                showApp("overview");
             } else {
                 const err = await res.json();
                 throw new Error(err.detail || "Invalid credentials");
@@ -276,7 +276,7 @@ function init() {
     });
 }
 
-function showApp() {
+function showApp(forceTab = null) {
     EL.loginModal.classList.add("hidden");
     if (EL.appContent) EL.appContent.classList.remove("hidden");
 
@@ -322,12 +322,11 @@ function showApp() {
     loadOverview();
     startClock();
 
-    // Support deep-linking to specific tabs via ?tab=tabName
+    // URL param wins, then session memory, then fallback
     const urlParams = new URLSearchParams(window.location.search);
-    const targetTab = urlParams.get('tab');
-    if (targetTab) {
-        switchTab(targetTab);
-    }
+    const targetTab = forceTab || urlParams.get('tab') || sessionStorage.getItem("admin_active_tab") || "overview";
+
+    switchTab(targetTab);
 }
 
 function startClock() {
@@ -412,11 +411,20 @@ function switchTab(tabName) {
     if (tabName === "shifts") loadShifts();
     if (tabName === "platform") loadPlatformCompanies();
     if (tabName === "reports") loadReports();
+    // Clear status message if entering settings
     if (tabName === "settings") {
-        // Clear status message
         const statusMsg = document.getElementById("pin-status-msg");
         if (statusMsg) statusMsg.classList.add("hidden");
     }
+
+    // Persist tab within session
+    sessionStorage.setItem("admin_active_tab", tabName);
+
+    // Sync URL with tab state (without refreshing page)
+    const newUrl = tabName === "overview"
+        ? window.location.pathname
+        : `${window.location.pathname}?tab=${tabName}`;
+    window.history.replaceState({ tab: tabName }, "", newUrl);
 }
 window.switchTab = switchTab;
 
@@ -883,9 +891,11 @@ async function loadReports() {
                 const opt = document.createElement("option");
                 opt.value = emp.id;
                 opt.textContent = emp.name;
-                if (emp.enrolled_at) {
-                    opt.dataset.created = emp.enrolled_at.split('T')[0];
+                const entryDate = emp.enrolled_at || emp.created_at;
+                if (entryDate) {
+                    opt.dataset.created = entryDate.split('T')[0];
                 }
+                opt.dataset.enrolled = emp.enrolled_at ? "true" : "false";
                 select.appendChild(opt);
             });
         } catch (e) {
@@ -925,6 +935,8 @@ async function renderHeatmap(offsetMonths = 0) {
     if (selectedOption && selectedOption.dataset.created) {
         createdDateStr = selectedOption.dataset.created;
     }
+
+    const isEnrolled = selectedOption && selectedOption.dataset.enrolled === "true";
 
     const btn = document.getElementById("view-heatmap-btn");
     btn.disabled = true;
@@ -975,7 +987,7 @@ async function renderHeatmap(offsetMonths = 0) {
             let bgColor = "#fecaca"; // < 2 hrs (light red)
             let textColor = "#991b1b";
 
-            if (isBeforeHire || isFuture) {
+            if (isBeforeHire || isFuture || !isEnrolled) {
                 bgColor = "var(--bg-subtle)";
                 textColor = "var(--text-muted)";
             } else if (hrs >= 8) {
@@ -1009,13 +1021,20 @@ async function renderHeatmap(offsetMonths = 0) {
             cell.style.backgroundColor = bgColor;
             cell.style.color = textColor;
             cell.style.display = "flex";
+
+            // Highlight Today
+            if (dateStr === todayStr) {
+                cell.style.outline = "3px solid var(--primary)";
+                cell.style.outlineOffset = "2px";
+                cell.style.boxShadow = "0 0 15px var(--primary-glow)";
+            } else {
+                cell.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
+            }
+
             cell.style.flexDirection = "column";
-            cell.style.alignItems = "center";
-            cell.style.justifyContent = "center";
-            cell.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
 
             let labelText = '-';
-            if (!isBeforeHire && !isFuture) {
+            if (!isBeforeHire && !isFuture && isEnrolled) {
                 if (hrs > 0) {
                     const h = Math.floor(hrs);
                     const m = Math.round((hrs - h) * 60);

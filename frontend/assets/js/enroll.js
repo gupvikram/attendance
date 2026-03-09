@@ -244,9 +244,9 @@ async function submitEnrollment() {
         setMsg("Enrollment successful!", false);
         EL.captureBtn.style.display = "none";
 
-        // Reload selection in 2 secs
+        // Close tab in 3 secs
         setTimeout(() => {
-            window.location.reload();
+            window.close();
         }, 3000);
 
     } catch (err) {
