@@ -112,12 +112,12 @@ async def scan_attendance(
             # Check Out
             row = existing.data[0]
             
-            # Validate checkout gap
+            # Allow immediate checkout by bypassing min_checkout_gap_minutes (or reducing to 1m to prevent double scans)
             check_in = datetime.fromisoformat(row["check_in_time"].replace("Z", "+00:00"))
-            if (now_utc - check_in).total_seconds() < (shift.get("min_checkout_gap_minutes", 60) * 60):
+            if (now_utc - check_in).total_seconds() < 60: # Just 1 minute debounce
                 msg = f"Checkout not allowed yet, {employee['name']}"
-                logger.warning(f"Scan Rejected: {msg}")
-                raise HTTPException(400, msg)
+                logger.warning(f"Scan Rejected (Double Scan): {msg}")
+                raise HTTPException(400, "Please wait 1 minute before scanning again.")
 
             supabase.table("attendance").update({
                 "check_out_time": now_iso,

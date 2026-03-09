@@ -879,6 +879,9 @@ async function loadReports() {
                 const opt = document.createElement("option");
                 opt.value = emp.id;
                 opt.textContent = emp.name;
+                if (emp.created_at) {
+                    opt.dataset.created = emp.created_at.split('T')[0];
+                }
                 select.appendChild(opt);
             });
         } catch (e) {
@@ -888,7 +891,8 @@ async function loadReports() {
 }
 
 document.getElementById("view-heatmap-btn").addEventListener("click", async () => {
-    const empId = document.getElementById("report-employee-select").value;
+    const selectEl = document.getElementById("report-employee-select");
+    const empId = selectEl.value;
     const month = document.getElementById("report-month").value;
     const container = document.getElementById("heatmap-container");
     const grid = document.getElementById("calendar-grid");
@@ -897,6 +901,9 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
         alert("Please select both a month and an employee.");
         return;
     }
+
+    const selectedOption = selectEl.options[selectEl.selectedIndex];
+    const createdDateStr = selectedOption.dataset.created || "2000-01-01";
 
     const btn = document.getElementById("view-heatmap-btn");
     btn.disabled = true;
@@ -927,11 +934,15 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
             const dateStr = `${y}-${m}-${d.toString().padStart(2, '0')}`;
             const dayData = data[dateStr] || { hours: 0, status: 'absent' };
             const hrs = dayData.hours;
+            const isBeforeHire = dateStr < createdDateStr;
 
             let bgColor = "#fecaca"; // < 2 hrs (light red)
             let textColor = "#991b1b";
 
-            if (hrs >= 8) {
+            if (isBeforeHire) {
+                bgColor = "var(--bg-subtle)";
+                textColor = "var(--text-muted)";
+            } else if (hrs >= 8) {
                 bgColor = "#166534"; // Dark Green
                 textColor = "#ffffff";
             } else if (hrs >= 6) {
@@ -943,9 +954,7 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
             } else if (hrs >= 2) {
                 bgColor = "#f87171"; // Red
                 textColor = "#ffffff";
-            }
-
-            if (hrs === 0) {
+            } else if (hrs === 0) {
                 bgColor = "var(--bg-subtle)";
                 textColor = "var(--text-muted)";
                 // Outline if absent
@@ -966,9 +975,18 @@ document.getElementById("view-heatmap-btn").addEventListener("click", async () =
             cell.style.justifyContent = "center";
             cell.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
 
+            let labelText = '-';
+            if (!isBeforeHire) {
+                if (hrs > 0) {
+                    labelText = hrs.toFixed(1) + 'h';
+                } else if (dayData.status === 'absent') {
+                    labelText = 'ABS';
+                }
+            }
+
             cell.innerHTML = `
                 <span style="font-size: 0.9rem; font-weight: 600; opacity: 0.9;">${d}</span>
-                <span style="font-size: 0.75rem; font-weight: 500; margin-top: 0.2rem;">${hrs > 0 ? hrs.toFixed(1) + 'h' : (dayData.status === 'absent' ? 'ABS' : '-')}</span>
+                <span style="font-size: 0.75rem; font-weight: 500; margin-top: 0.2rem;">${labelText}</span>
             `;
 
             grid.appendChild(cell);
