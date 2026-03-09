@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel
-from core.config import supabase
+from pydantic import BaseModel, EmailStr, field_validator
+import re
+from core.config import supabase, supabase_admin
 from core.deps import require_admin_company, require_super_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -10,7 +11,7 @@ class EmailLogin(BaseModel):
     password: str
 
 class EmailSignup(BaseModel):
-    email: str
+    email: EmailStr
     company_name: str
 
 class CompanyStatusToggle(BaseModel):
@@ -25,7 +26,7 @@ class PasswordUpdate(BaseModel):
 
 class AdminReset(BaseModel):
     company_id: str
-    new_email: str = None
+    new_email: EmailStr = None
     new_password: str = None
 
 @router.post("/login")
@@ -73,15 +74,16 @@ async def provision_company(payload: EmailSignup, super_admin_id: str = Depends(
     """Provision a new company and invite the first admin."""
     try:
         # 1. Create Company
-        comp_res = supabase.table("companies").insert({"name": payload.company_name}).execute()
+        client = supabase_admin if supabase_admin else supabase
+        comp_res = client.table("companies").insert({"name": payload.company_name}).execute()
         if not comp_res.data:
             raise Exception("Failed to create company")
         company_id = comp_res.data[0]["id"]
         
-        # 2. Create User via Supabase Admin Auth
         # We use create_user with email_confirm=True to bypass invitation flow hurdles
         temp_password = "admin" 
-        invite_res = supabase.auth.admin.create_user({
+        client = supabase_admin if supabase_admin else supabase
+        invite_res = client.auth.admin.create_user({
             "email": payload.email,
             "password": temp_password,
             "email_confirm": True
@@ -89,7 +91,8 @@ async def provision_company(payload: EmailSignup, super_admin_id: str = Depends(
         user_id = invite_res.user.id
         
         # 3. Create Profile (Role: company_admin)
-        supabase.table("user_profiles").insert({
+        client = supabase_admin if supabase_admin else supabase
+        client.table("user_profiles").insert({
             "id": user_id,
             "company_id": company_id,
             "role": "company_admin",
@@ -107,7 +110,8 @@ async def provision_company(payload: EmailSignup, super_admin_id: str = Depends(
 async def toggle_company_status(payload: CompanyStatusToggle, super_admin_id: str = Depends(require_super_admin)):
     """Suspend or activate a company."""
     try:
-        supabase.table("companies").update({"is_active": payload.is_active}).eq("id", payload.company_id).execute()
+        client = supabase_admin if supabase_admin else supabase
+        client.table("companies").update({"is_active": payload.is_active}).eq("id", payload.company_id).execute()
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -116,7 +120,8 @@ async def toggle_company_status(payload: CompanyStatusToggle, super_admin_id: st
 async def list_companies(super_admin_id: str = Depends(require_super_admin)):
     """List all companies for Super Admin oversight."""
     # Fetch companies and their primary admin email from user_profiles
-    res = supabase.table("companies").select("*, user_profiles(email, role)").order("created_at").execute()
+    client = supabase_admin if supabase_admin else supabase
+    res = client.table("companies").select("*, user_profiles(email, role)").order("created_at").execute()
     companies = res.data
 
     for comp in companies:
@@ -147,7 +152,8 @@ async def reset_company_admin(payload: AdminReset, super_admin_id: str = Depends
             
             # Force Create Mode - Check if user already exists in Auth first
             print(f"[RESET ADMIN] Searching for existing user in Auth: {payload.new_email}")
-            users_res = supabase.auth.admin.list_users()
+            client = supabase_admin if supabase_admin else supabase
+            users_res = client.auth.admin.list_users()
             users_list = users_res.users if hasattr(users_res, "users") else users_res
             existing_user = next((u for u in users_list if u.email.lower() == payload.new_email.lower()), None)
             
@@ -156,10 +162,10 @@ async def reset_company_admin(payload: AdminReset, super_admin_id: str = Depends
                 user_id = existing_user.id
                 # Update password if provided
                 if payload.new_password:
-                    supabase.auth.admin.update_user_by_id(user_id, {"password": payload.new_password})
+                    client.auth.admin.update_user_by_id(user_id, {"password": payload.new_password})
             else:
                 print(f"[RESET ADMIN] Creating NEW user {payload.new_email} in Auth.")
-                auth_res = supabase.auth.admin.create_user({
+                auth_res = client.auth.admin.create_user({
                     "email": payload.new_email,
                     "password": payload.new_password,
                     "email_confirm": True
@@ -183,7 +189,8 @@ async def reset_company_admin(payload: AdminReset, super_admin_id: str = Depends
                 update_data["password"] = payload.new_password
                 
             if update_data:
-                auth_res = supabase.auth.admin.update_user_by_id(user_id, update_data)
+                client = supabase_admin if supabase_admin else supabase
+                auth_res = client.auth.admin.update_user_by_id(user_id, update_data)
                 if not auth_res.user:
                     raise Exception("Supabase Auth update failed")
             
@@ -203,7 +210,8 @@ async def reset_company_admin(payload: AdminReset, super_admin_id: str = Depends
              profile_data["full_name"] = target_profile["full_name"]
             
         print(f"[RESET ADMIN] Syncing profile for {user_id}: {profile_data}")
-        supabase.table("user_profiles").upsert(profile_data).execute()
+        client = supabase_admin if supabase_admin else supabase
+        client.table("user_profiles").upsert(profile_data).execute()
             
         return {"status": "success", "message": f"Credentials updated and profile linked for {payload.new_email or 'existing admin'}"}
     except Exception as e:
@@ -230,7 +238,8 @@ async def update_auth_password(request: Request, payload: PasswordUpdate, compan
         
     try:
         # Use the Admin API because the global client doesn't hold the user's specific session
-        supabase.auth.admin.update_user_by_id(user_id, {"password": payload.new_password})
+        client = supabase_admin if supabase_admin else supabase
+        client.auth.admin.update_user_by_id(user_id, {"password": payload.new_password})
         print(f"[AUTH] Password updated for UID: {user_id}")
         return {"status": "success"}
     except Exception as e:

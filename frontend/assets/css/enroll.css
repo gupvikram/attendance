@@ -7,6 +7,28 @@
     padding: 2rem;
 }
 
+.enroll-header {
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.header-nav {
+    margin-bottom: 1.5rem;
+}
+
+.back-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    display: inline-block;
+}
+
+.back-link:hover {
+    color: var(--primary);
+}
+
 .enroll-container h1 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;

@@ -1,5 +1,5 @@
 from fastapi import Request, HTTPException
-from core.config import supabase
+from core.config import supabase, supabase_admin
 
 async def verify_device_key(request: Request) -> dict:
     """Validate device API key and ensure current company is active."""
@@ -37,9 +37,8 @@ async def require_admin_company(request: Request) -> str:
         uid = user_res.user.id
         request.state.user_id = uid
         
-        # Look up their profile and nested company status
-        # We join with companies to check if is_active
-        profile_res = supabase.table("user_profiles").select("company_id, companies(is_active)").eq("id", uid).execute()
+        profile_client = supabase_admin if supabase_admin else supabase
+        profile_res = profile_client.table("user_profiles").select("company_id, companies(is_active)").eq("id", uid).execute()
         if not profile_res.data:
             raise HTTPException(status_code=403, detail="User profile or company mapping not found")
             
@@ -68,7 +67,8 @@ async def require_super_admin(request: Request) -> str:
     user_res = supabase.auth.get_user(token)
     uid = user_res.user.id
     
-    res = supabase.table("user_profiles").select("role").eq("id", uid).execute()
+    profile_client = supabase_admin if supabase_admin else supabase
+    res = profile_client.table("user_profiles").select("role").eq("id", uid).execute()
     if not res.data or res.data[0]["role"] != "super_admin":
         raise HTTPException(status_code=403, detail="Super Admin privileges required")
     

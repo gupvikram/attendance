@@ -321,6 +321,13 @@ function showApp() {
 
     loadOverview();
     startClock();
+
+    // Support deep-linking to specific tabs via ?tab=tabName
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetTab = urlParams.get('tab');
+    if (targetTab) {
+        switchTab(targetTab);
+    }
 }
 
 function startClock() {
@@ -444,7 +451,18 @@ async function apiFetch(endpoint, options = {}) {
                 window.location.reload();
             }
             const err = await res.json();
-            throw new Error(err.detail || "API Error");
+            let msg = err.detail || "API Error";
+
+            // If it's a Pydantic validation error list, extract readable text
+            if (Array.isArray(msg)) {
+                msg = msg.map(m => {
+                    // Try to make it non-technical
+                    if (m.msg.includes("valid email address")) return "Please enter a valid email address.";
+                    return m.msg;
+                }).join(" ");
+            }
+
+            throw new Error(msg);
         }
         return await res.json();
     } catch (e) {
