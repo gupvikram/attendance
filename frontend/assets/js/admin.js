@@ -472,8 +472,6 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 async function loadOverview() {
-    document.getElementById("overview-date").innerText = new Date().toDateString();
-
     try {
         // Fetch all required data concurrently for the summary metrics
         const todayStr = new Date().toISOString().split('T')[0];
