@@ -456,6 +456,7 @@ input[type="month"]:focus {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+    min-width: 900px;
 }
 
 .data-table th,
