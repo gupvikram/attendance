@@ -452,6 +452,26 @@ input[type="month"]:focus {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
+/* Custom Scrollbar to make horizontal scrolling obvious */
+.table-container::-webkit-scrollbar {
+    height: 10px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0 0 12px 12px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #0ea5e9;
+    /* Slightly darker shade of primary */
+}
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
