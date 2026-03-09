@@ -59,3 +59,11 @@ async def delete_device(device_id: str, company_id: str = Depends(require_admin_
         return {"status": "deleted"}
     except Exception as e:
         raise HTTPException(500, f"Could not delete device: {str(e)}")
+@router.patch("/{device_id}")
+async def update_device(device_id: str, payload: DeviceUpdate, company_id: str = Depends(require_admin_company)):
+    """Update device details or active status."""
+    data = payload.model_dump(exclude_unset=True)
+    res = supabase.table("devices").update(data).eq("id", device_id).eq("company_id", company_id).execute()
+    if not res.data:
+        raise HTTPException(404, "Device not found or access denied")
+    return res.data[0]

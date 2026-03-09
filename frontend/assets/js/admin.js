@@ -370,10 +370,12 @@ function switchTab(tabName) {
     if (tabName === "platform" && CURRENT_USER_ROLE !== 'super_admin') return;
 
     EL.navLinks.forEach(l => l.classList.remove("active"));
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add("active");
+    const targetLink = document.querySelector(`[data-tab="${tabName}"]`);
+    if (targetLink) targetLink.classList.add("active");
 
     EL.tabPanes.forEach(p => p.classList.add("hidden"));
-    document.getElementById(`tab-${tabName}`).classList.remove("hidden");
+    const targetPane = document.getElementById(`tab-${tabName}`);
+    if (targetPane) targetPane.classList.remove("hidden");
 
     // Load data based on tab
     if (tabName === "overview") loadOverview();
@@ -384,9 +386,11 @@ function switchTab(tabName) {
     if (tabName === "platform") loadPlatformCompanies();
     if (tabName === "settings") {
         // Clear status message
-        document.getElementById("pin-status-msg").classList.add("hidden");
+        const statusMsg = document.getElementById("pin-status-msg");
+        if (statusMsg) statusMsg.classList.add("hidden");
     }
 }
+window.switchTab = switchTab;
 
 // Global modal close helpers
 function setupModalClose(modalId, closeBtnId) {
@@ -482,7 +486,6 @@ async function loadOverview() {
                 grid.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 2rem; background: var(--surface); border-radius: 12px; border: 1px dashed var(--border);">
                     <p style="color: var(--text-muted);">No devices registered for this company.</p>
-                    <a href="#" onclick="showTab('devices')" style="color: var(--primary); font-size: 0.9rem; text-decoration: none; margin-top: 0.5rem; display: inline-block;">+ Add your first device</a>
                 </div>`;
             } else {
                 devices.forEach(dev => {
@@ -727,12 +730,34 @@ async function loadDevices() {
                     <td style="font-family:monospace; font-size:0.8rem;">${dev.api_key}</td>
                     <td><span class="badge ${dev.status === 'online' ? 'bg-success' : 'bg-danger'}">${dev.status.toUpperCase()}</span></td>
                     <td>${hb}</td>
-                    <td>-</td>
+                    <td>
+                        <label class="toggle-switch">
+                            <input type="checkbox" class="toggle-dev-status" data-id="${dev.id}" ${dev.active !== false ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </td>
                     <td>
                         <button class="btn btn-outline btn-sm delete-dev" data-id="${dev.id}" style="color:red; border-color:red; padding: 0.2rem 0.5rem; font-size: 0.8rem;">Remove</button>
                     </td>
                 </tr>
             `;
+        });
+
+        // Attach status toggle handlers
+        document.querySelectorAll(".toggle-dev-status").forEach(toggle => {
+            toggle.addEventListener("change", async (e) => {
+                const id = e.target.dataset.id;
+                const newStatus = e.target.checked;
+                try {
+                    await apiFetch(`/devices/${id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ active: newStatus })
+                    });
+                } catch (err) {
+                    alert("Failed to update status: " + err.message);
+                    e.target.checked = !newStatus; // Revert visually on error
+                }
+            });
         });
 
         // Attach Remove handlers

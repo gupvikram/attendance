@@ -14,6 +14,7 @@ class DeviceUpdate(BaseModel):
     location_id: Optional[int] = None
     api_key: Optional[str] = None
     status: Optional[str] = None
+    active: Optional[bool] = None
 
 # ── Shifts ────────────────────────────────────────────────────────────────────
 
