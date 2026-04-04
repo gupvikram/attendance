@@ -7,6 +7,20 @@ from fastapi.responses import FileResponse
 from core.config import supabase
 from core.deps import require_admin_company
 
+def parse_timestamp(raw: str) -> datetime:
+    """Robustly parse Supabase timestamptz strings into aware datetimes."""
+    if raw is None:
+        return None
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(normalized)
+    except ValueError:
+        clean = raw.split('+')[0].replace('Z', '').split('.')[0]
+        dt = datetime.fromisoformat(clean)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 @router.get("/monthly")
@@ -152,14 +166,10 @@ async def get_employee_calendar(emp_id: int, month: str = None, company_id: str 
     for record in records:
         date = record["date"]
         
-        raw_in = record["check_in_time"]
-        in_clean = raw_in.split('+')[0].replace('Z', '').split('.')[0]
-        in_time = datetime.fromisoformat(in_clean).replace(tzinfo=timezone.utc)
+        in_time = parse_timestamp(record["check_in_time"])
         
         if record["check_out_time"]:
-            raw_out = record["check_out_time"]
-            out_clean = raw_out.split('+')[0].replace('Z', '').split('.')[0]
-            out_time = datetime.fromisoformat(out_clean).replace(tzinfo=timezone.utc)
+            out_time = parse_timestamp(record["check_out_time"])
             duration_hours = (out_time - in_time).total_seconds() / 3600.0
         else:
             # Still checked in or forgot to check out

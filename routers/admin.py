@@ -1,8 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr, field_validator
 import re
+import secrets
+import string
 from core.config import supabase, supabase_admin
 from core.deps import require_admin_company, require_super_admin
+from core.limiter import limiter
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -30,7 +33,8 @@ class AdminReset(BaseModel):
     new_password: str = None
 
 @router.post("/login")
-async def login_with_email(payload: EmailLogin):
+@limiter.limit("5/minute")
+async def login_with_email(request: Request, payload: EmailLogin):
     """Initial login to get a Supabase JWT and role metadata."""
     try:
         res = supabase.auth.sign_in_with_password({
@@ -80,8 +84,9 @@ async def provision_company(payload: EmailSignup, super_admin_id: str = Depends(
             raise Exception("Failed to create company")
         company_id = comp_res.data[0]["id"]
         
-        # We use create_user with email_confirm=True to bypass invitation flow hurdles
-        temp_password = "admin" 
+        # Generate a secure random temp password
+        alphabet = string.ascii_letters + string.digits + "!@#$%"
+        temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
         client = supabase_admin if supabase_admin else supabase
         invite_res = client.auth.admin.create_user({
             "email": payload.email,

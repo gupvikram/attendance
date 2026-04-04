@@ -29,6 +29,9 @@ load_dotenv()
 
 from core.config import supabase, SUPABASE_URL, SUPABASE_KEY, RECOGNITION_DISTANCE_THRESHOLD, WEAK_MATCH_UPPER
 
+# Read allowed CORS origins from environment, defaults to localhost for dev
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:8002").split(",")
+
 # ── App lifecycle ─────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -88,7 +91,7 @@ async def log_requests(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

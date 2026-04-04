@@ -539,7 +539,7 @@ async function loadOverview() {
             } else {
                 devices.forEach(dev => {
                     const isOnline = dev.status === "online";
-                    const lastSeen = dev.last_heartbeat ? new Date(dev.last_heartbeat).toLocaleTimeString() : "Never";
+                    const lastSeen = dev.last_heartbeat ? new Date(dev.last_heartbeat).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : "Never";
 
                     grid.innerHTML += `
                     <div class="device-card ${!isOnline ? 'offline' : ''}">

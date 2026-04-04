@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from typing import List
 import logging
@@ -13,6 +13,22 @@ from models.schemas import AttendanceScan, AttendanceManualUpdate
 from routers.attendance_helpers import process_self_updating_descriptor
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
+
+def parse_timestamp(raw: str) -> datetime:
+    """Robustly parse Supabase timestamptz strings into aware datetimes."""
+    if raw is None:
+        return None
+    # Normalize: replace trailing Z with +00:00 for fromisoformat
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(normalized)
+    except ValueError:
+        # Fallback: strip microseconds/tz and parse manually
+        clean = raw.split('+')[0].replace('Z', '').split('.')[0]
+        dt = datetime.fromisoformat(clean)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 @router.post("/scan")
 @limiter.limit("30/minute")
@@ -84,9 +100,8 @@ async def scan_attendance(
             # Calculate status based on time (only really relevant for the first check-in of the day)
             shift_start = datetime.strptime(shift["start_time"], "%H:%M:%S").time()
             check_in_dt = datetime.combine(now_utc.date(), shift_start).replace(tzinfo=timezone.utc)
-            grace_dt = check_in_dt.replace(minute=check_in_dt.minute + shift.get("grace_period_minutes", 15))
+            grace_dt = check_in_dt + timedelta(minutes=shift.get("grace_period_minutes", 15))
             
-            # Very simplistic local vs UTC math comparison
             is_late = now_utc > grace_dt
             
             # Since "return" is likely not a valid enum in the DB causing a 400 error,
@@ -110,9 +125,7 @@ async def scan_attendance(
             row = existing.data[0]
             
             # Allow immediate checkout by bypassing min_checkout_gap_minutes (or reducing to 1m to prevent double scans)
-            raw_check_in = row["check_in_time"]
-            clean_ts = raw_check_in.split('+')[0].replace('Z', '').split('.')[0]
-            check_in = datetime.fromisoformat(clean_ts).replace(tzinfo=timezone.utc)
+            check_in = parse_timestamp(row["check_in_time"])
             
             if (now_utc - check_in).total_seconds() < 60: # Just 1 minute debounce
                 msg = f"Checkout not allowed yet, {employee['name']}"
@@ -199,8 +212,8 @@ async def update_attendance(record_id: int, payload: AttendanceManualUpdate, com
         raise HTTPException(500, str(e))
 
 @router.get("")
-async def query_attendance(date: str = None, employee_id: int = None, company_id: str = Depends(require_admin_company)):
-    """Fetch attendance records, optionally filtered by date or employee. Admin only."""
+async def query_attendance(date: str = None, employee_id: int = None, company_id: str = Depends(require_admin_company), limit: int = 200, offset: int = 0):
+    """Fetch attendance records with pagination. Optionally filtered by date or employee. Admin only."""
     try:
         query = supabase.table("attendance").select("*, employee:employees(name, role)").eq("company_id", company_id)
         
@@ -209,7 +222,7 @@ async def query_attendance(date: str = None, employee_id: int = None, company_id
         if employee_id:
             query = query.eq("employee_id", employee_id)
             
-        res = query.order("check_in_time", desc=True).execute()
+        res = query.order("check_in_time", desc=True).range(offset, offset + limit - 1).execute()
         return res.data
     except Exception as e:
         raise HTTPException(500, str(e))

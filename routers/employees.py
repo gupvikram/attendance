@@ -10,9 +10,9 @@ from routers.utils import increment_descriptor_version
 router = APIRouter(prefix="/employees", tags=["employees"])
 
 @router.get("")
-async def list_employees(company_id: str = Depends(require_admin_company)):
-    """List all employees for the given tenant. Admin only."""
-    return supabase.table("employees").select("*, shifts(*)").eq("company_id", company_id).execute().data
+async def list_employees(company_id: str = Depends(require_admin_company), limit: int = 100, offset: int = 0):
+    """List employees for the given tenant with pagination. Admin only."""
+    return supabase.table("employees").select("*, shifts(*)").eq("company_id", company_id).range(offset, offset + limit - 1).execute().data
 
 @router.get("/descriptors")
 async def get_descriptors(request: Request, response: Response, device: dict = Depends(verify_device_key)):
